@@ -1,0 +1,22 @@
+{
+  "description": "scan and update bookmarks to use https instead of http",
+	"author": "MrOtherGuy",
+  "manifest_version": 2,
+  "name": "bookmark http-to-https updater",
+  "permissions": ["bookmarks"],
+  "version": "0.2",
+  "browser_action": {
+      "default_title": "bmupdate",
+			"browser_style": true,
+      "default_popup": "popup.html"
+  },
+  "background": {
+		"scripts": ["background-script.js"]
+	},
+	"applications": {
+  "gecko": {
+    "id": "bmupdater@example.com",
+		"strict_min_version": "61.0"
+  }
+}
+}

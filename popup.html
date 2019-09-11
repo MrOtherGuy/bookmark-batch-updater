@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Template</title>
+  <meta name="viewport" content="width=device-width"/>
+  <meta charset="UTF-8">
+  <script type="text/javascript" src="popup-script.js"></script>
+  <style>
+  #domainText:not(:empty)::before{content:"@"}
+  body > p:first-child{ padding: 0 200px }
+  </style>
+</head>
+<body>
+  <p>http: to https: bookmark-updater</p> 
+  <button id="scanButton">Scan bookmarks</button>
+  <button id="updateButton" disabled="true">Update bookmarks</button>
+  <input id="domainFilter" type="text" placeholder="Input domain name to filter results i.e. 'imgur.com'"></input>
+  <p id="nBookmarks">Number of 'http:' bookmarks <span id="domainText"></span>:<span id="bookmarkCount"></span></p>
+  <p id="bmList"></p>
+</body>
+</html>
