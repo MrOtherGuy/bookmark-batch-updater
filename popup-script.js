@@ -1,55 +1,55 @@
 'use strict';
 
-let scannedBookmarks = null;
-
-function getDomain(url){
-  let end = url.indexOf("/",7);
-  if(end > 7){
-    return url.slice(7,end)
-  }else{
-    return url.slice(7)
+function messageHandler(request,sender,sendResponse){
+  if(sender.id != browser.runtime.id || sender.envType != "addon_child"){
+      return
   }
-}
-
-function traverseBookmarkTree(tree,ref){
   
-  for(let node of tree.children){
-    if(node.children){
-      traverseBookmarkTree(node,ref);
-    }else if(node.type === "bookmark"){
-      if((/^http:/).test(node.url)){
-        
-        let domain = getDomain(node.url);
-        if(ref.domain === null || domain === ref.domain){
-          ref.collection.push(node);
-        }
-        
-        /*
-          node.domain = domain;
-          if(!ref.domains.includes(domain)){
-          ref.domains.push(domain);
-        }*/
+  switch(request.type){
+    case "scan":
+    let button = document.querySelector("#updateButton");
+      document.querySelector("#bookmarkCount").textContent = request.length; 
+      if(request.success){
+        button.removeAttribute("disabled");
+        setStatus("Scan complete");
+      }else{
+        button.setAttribute("disabled","true");
+        setStatus("Scan failed");
       }
-    }
+      document.querySelector("#scanButton").textContent = "Scan bookmarks";
+      break;
+    case "update":
+      if(request.success){
+        setStatus(`Update success:${request.message}`)
+      }else{
+        setStatus(`Update failed:${request.message}`)
+      }
+      break;
+    default:
+      return
   }
-  return ref;
+  
 }
 
-function initScan(domain){
-  return new Promise((resolve,reject) => {
-    browser.bookmarks.getTree().then(
-      (success) => resolve(traverseBookmarkTree(success[0],{collection:[],domain:domain})),
-      (error) => reject("for reasons")
-    );
-  });
+function setStatus(str){
+  document.querySelector("#statusbar").textContent = str;
 }
 
-function scan(e){
+function requestScan(e){
   e.target.textContent = "scanning...";
   let domain = String(document.querySelector("#domainFilter").value) || null;
-  let scanning = initScan(domain);
+  //let scanning = initScan(domain);
+  
+  browser.runtime.sendMessage({operation:"scan",domain:domain})
+  .then(
+    (response)=>{
+      setStatus(`${response.ok?"Please wait...":"Error"}:${response.message}`);
+    },
+    (error)=>(setStatus("something went wrong"))
+    );
+  /*
   scanning.then((bookmarks) => {
-    e.target.textContent = "scan complete";
+    e.target.textContent = "Scan bookmarks";
     document.querySelector("#domainText").textContent = domain || "";
     document.querySelector("#bookmarkCount").textContent = bookmarks.collection.length;
     //console.log(bookmarks.collection);
@@ -69,102 +69,12 @@ function scan(e){
     scannedBookmarks = bookmarks;
   },
   (error)=>(console.log(error),scannedBookmarks = null,document.querySelector("#updateButton").setAttribute("disabled","true"))
-  );
-}
-
-function urlEquals(url1,url2){
-  
-  if(!url1.endsWith("/")){
-    url1 += "/";
-  }
-  if(!url2.endsWith("/")){
-    url2 += "/";
-  }
-  
-  return url1 === url2
-}
-/*
-function testNetwork(domain){
-  return new Promise((resolve,reject) => {
-    const xhr = new XMLHttpRequest();
-    const url = `https://${domain}/`;
-    xhr.open('GET',url,true);
-    xhr.onreadystatechange = function(){
-      //console.log(xhr.readyState);
-      if (xhr.readyState === 3){
-        //console.log(xhr.status);
-        if(urlEquals(xhr.responseURL,url)){
-          resolve(domain)
-        }else{
-          //console.log(xhr.responseURL);
-          resolve(0);
-        }
-        xhr.abort();
-      }
-    };
-    xhr.onerror = () => (resolve(0));
-    xhr.send();
-  })
-}
-
-function updateBookmarksWithNetworkTest(){
-  if(scannedBookmarks === null){
-    return
-  }
-  let bookmarkPromises = [];
-  let domainQueries = [];
-  for(let bm of scannedBookmarks.collection ){
-    let idx = scannedBookmarks.domains.indexOf(bm.domain);
-    if(idx != -1){
-      scannedBookmarks.domains[idx] = null;
-      domainQueries.push(testNetwork(bm.domain));
-    }
-  }
-  let validDomains = [];
-  Promise.all(domainQueries).then((values)=>{
-    
-    for(let domain of values){
-      console.log(domain);
-      if(domain){
-        validDomains.push(domain);
-      }
-    }
-    console.log(`${validDomains.length} unique domains`);
-  })
-  .then(()=>{
-    for(let bm of scannedBookmarks.collection){
-      if(validDomains.includes(bm.domain)){
-        
-        bookmarkPromises.push(browser.bookmarks.update(bm.id,{url:bm.url.replace(/^http:/,"https:")}))
-      }
-    }
-  })
-  .finally(
-    Promise.all(bookmarkPromises)
-    .then(
-      ()=>(document.querySelector("#nBookmarks").textContent = `Update successful - ${bookmarkPromises.length} were updated`))
-    .catch(error => (document.querySelector("#nBookmarks").textContent = `FAILURE:${error}`))
-  )
-}
-*/
-function updateBookmarks(){
-  if(scannedBookmarks === null){
-    return
-  }
-  let bookmarkPromises = [];
-  for(let bm of scannedBookmarks.collection ){
-   bookmarkPromises.push(browser.bookmarks.update(bm.id,{url:bm.url.replace(/^http:/,"https:")}))
-  }
-  Promise.all(bookmarkPromises)
-  .then((values)=>{
-    document.querySelector("#nBookmarks").textContent = `Update successful - ${bookmarkPromises.length} were updated`;
-    
-  })
-  .catch(error => (document.querySelector("#nBookmarks").textContent = `FAILURE:${error}`))
+  );*/
 }
 
 document.onreadystatechange = function () {
   if (document.readyState === "complete") {
-    document.querySelector("#scanButton").addEventListener("click",scan);
+    document.querySelector("#scanButton").addEventListener("click",requestScan);
+    browser.runtime.onMessage.addListener(messageHandler);
   }
 }
