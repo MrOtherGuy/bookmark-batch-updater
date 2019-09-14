@@ -5,7 +5,7 @@ let BMU = new (function(){
   this.pendingOperations = "";
   this.scannedBookmarks = null;
   
-  this.progress = { current:null, target:null, get : ()=> ((!this.current || !this.target) ? 0 : this.current/this.target) };
+  this.progress = { current:null, target:null, get : ()=> ((!this.progress.current || !this.progress.target) ? 0 : Math.ceil(100*(this.progress.current/this.progress.target))) };
   
   this.debug = true;
   
@@ -28,13 +28,13 @@ let BMU = new (function(){
         break;
       case "status":
         this.print("received status query");
-        sendResponse({ok:true,message:`${this.pendingOperations} is in progress`,progress:`${this.progress}%`});
+        sendResponse({ok:true,busy:!!this.pendingOperations,message:`${this.pendingOperations} is in progress`,progress:`${this.progress.get()}%`});
         // TODO
         break;
       case "update":
         this.print("received update request");
-        let ok = (!this.pendingOperations && this.scannedBookmarks != null);
-        sendResponse({ok:ok,message:this.pendingOperations?`${this.pendingOperations} is in progress`:!this.scannedBookmarks?"Bookmarks haven't been scanned yet":""});
+        let ok = (!this.pendingOperations && this.scannedBookmarks.length > 0);
+        sendResponse({ok:ok,message:this.pendingOperations?`${this.pendingOperations} is in progress`:!this.scannedBookmarks?"Bookmarks haven't been scanned yet":this.scannedBookmarks.length > 0?"":"No bookmarks to update"});
         ok && this.update();
         // TODO
         break;
@@ -94,13 +94,12 @@ let BMU = new (function(){
   
   this.update = async function(){
     
-    const clear = function(){
-      this.progress.current = null;
-      this.progress.target = null;
-      this.scannedBookmarks = null
-      this.pendingOperations = "";
+    const clear = function(o){
+      o.progress.current = null;
+      o.progress.target = null;
+      o.scannedBookmarks = null
+      o.pendingOperations = "";
     };
-    
     if(this.scannedBookmarks === null){
       return
     }
@@ -116,12 +115,18 @@ let BMU = new (function(){
       Promise.all(bookmarkPromises)
       .then((values)=>{
         browser.runtime.sendMessage({type:"update",success:true,length:this.progress.current});
-        clear();
+        clear(this);
       })
-      .catch((error) => (browser.runtime.sendMessage({type:"update",success:false,length:this.progress.current})),this.print("update error"),clear())
+      .catch((error) => {
+        browser.runtime.sendMessage({type:"update",success:false,length:this.progress.current});
+        this.print("update error");
+        console.log(error);
+        clear(this)
+      })
     
     }catch(err){
-      clear();
+      console.log(err);
+      clear(this);
     }
     
   }
