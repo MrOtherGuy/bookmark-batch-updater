@@ -2,11 +2,11 @@
   "description": "scan and update bookmarks to use https instead of http",
 	"author": "MrOtherGuy",
   "manifest_version": 2,
-  "name": "bookmark http-to-https updater",
+  "name": "bookmark batch-updater",
   "permissions": ["bookmarks"],
-  "version": "0.2",
+  "version": "0.3",
   "browser_action": {
-      "default_title": "bmupdate",
+      "default_title": "bookmark batch-updater",
 			"browser_style": true,
       "default_popup": "popup.html"
   },
