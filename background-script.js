@@ -33,10 +33,16 @@ let BMU = new (function(){
         break;
       case "update":
         this.print("received update request");
-        let ok = (!this.pendingOperations && this.scannedBookmarks.length > 0);
-        sendResponse({ok:ok,message:this.pendingOperations?`${this.pendingOperations} is in progress`:!this.scannedBookmarks?"Bookmarks haven't been scanned yet":this.scannedBookmarks.length > 0?"":"No bookmarks to update"});
+        let ok = (!this.pendingOperations &&  (this.scannedBookmarks.collection && this.scannedBookmarks.collection.length > 0));
+        sendResponse({ok:ok,message:this.pendingOperations?`${this.pendingOperations} is in progress`:!this.scannedBookmarks?"Bookmarks haven't been scanned yet":this.scannedBookmarks.collection.length > 0?"":"No bookmarks to update"});
         ok && this.update();
         // TODO
+        break;
+      case "list":
+        this.print("received scanned list request");
+        let shouldList = (!this.pendingOperations && !!this.scannedBookmarks);
+        sendResponse({ok:shouldList,message:this.pendingOperations?"busy":!!this.scannedBookmarks?"":"Bookmarks haven't been scanned yet"})
+        shouldList && this.createBookmarkList();
         break;
       default:
         this.print("received some random request");
@@ -44,6 +50,26 @@ let BMU = new (function(){
         return
     }
     
+  };
+  
+  this.createBookmarkList = async function(){
+    if(this.pendingOperations || !this.scannedBookmarks.collection){
+      return
+    }
+    this.pendingOperations = "listing";
+    let bookmarks = this.scannedBookmarks.collection;
+    let list = [];
+    const END = Math.min(100,bookmarks.length);
+    let idx = 0;
+    while(idx < END){
+      list.push(bookmarks[idx].url)
+      idx++
+    }
+    if (bookmarks.length > END){
+      list.push(`--- and ${bookmarks.length - END} more ---`);
+    }
+    this.pendingOperations = "";
+    browser.runtime.sendMessage({type:"list",list:list});
   };
   
   // This expects url that starts with "http://"
@@ -56,7 +82,7 @@ let BMU = new (function(){
     }
   };
   
-  this.traverseBookmarkTree = function(tree,ref){
+  this.traverseBookmarkTree = async function(tree,ref){
     for(let node of tree.children){
       if(node.children){
         this.traverseBookmarkTree(node,ref);

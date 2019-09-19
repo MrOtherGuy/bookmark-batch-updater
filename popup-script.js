@@ -14,11 +14,14 @@ function messageHandler(request,sender,sendResponse){
       if(request.success){
         button.removeAttribute("disabled");
         setStatus("Scan complete");
+        browser.runtime.sendMessage({operation:"list"})
+        .then((response)=>(console.log(response)))
       }else{
         button.setAttribute("disabled","true");
         setStatus("Scan failed");
       }
       document.querySelector("#scanButton").textContent = "Scan bookmarks";
+      
       break;
     case "update":
       if(request.success){
@@ -31,10 +34,25 @@ function messageHandler(request,sender,sendResponse){
       document.querySelector("#scanButton").removeAttribute("disabled");
       clearInterval(INTERVAL);
       break;
+    case "list":
+      listBookmarks(request.list);
+      break;
     default:
       return
   }
   
+}
+
+function listBookmarks(list){
+  let listParent = document.querySelector("#bmList");
+  while(listParent.children.length > 0){
+    listParent.removeChild(listParent.children[0]);
+  }
+  for(let url of list){
+    let div = document.createElement("div");
+    div.textContent = url;
+    listParent.appendChild(div)
+  }
 }
 
 function setStatus(str,progress){
@@ -92,7 +110,7 @@ function initView(state){
 async function statusCheck(){
   browser.runtime.sendMessage({operation:"status"})
   .then(
-    (message)=>(setStatus("",message.progress))
+    (message)=>(setStatus("Progress: ",message.progress))
   )
 }
 
@@ -122,6 +140,6 @@ document.onreadystatechange = function () {
     browser.runtime.onMessage.addListener(messageHandler);
     // Ask status from background
     browser.runtime.sendMessage({operation:"status"})
-    .then((state)=>(state.busy&&initView(state)))
+    .then((state)=>{if(state.busy){initView(state);INTERVAL=setInterval(statusCheck,300)}})
   }
 }

@@ -6,12 +6,13 @@
   <meta charset="UTF-8">
   <script type="text/javascript" src="popup-script.js"></script>
   <style>
+  body{ min-height: 260px }
   #domainText:not(:empty)::before{content:"@"}
-  body > p:first-child{ padding: 0 200px }
+  body > h2:first-child{ padding: 0 18ch }
   </style>
 </head>
 <body>
-  <p>http: to https: bookmark-updater</p> 
+  <h2>Bookmark batch updater</h2> 
   <button id="scanButton">Scan bookmarks</button>
   <button id="updateButton" disabled="true">Update bookmarks</button>
   <p id="statusbar"><span id="messageBox"></span><span id="progressBox"></span></p>
