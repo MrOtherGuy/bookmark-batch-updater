@@ -15,8 +15,8 @@
 	},
 	"applications": {
   "gecko": {
-    "id": "bmupdater@example.com",
-		"strict_min_version": "61.0"
+    "id": "bmbupdater@example.com",
+		"strict_min_version": "57.0"
   }
 }
 }
