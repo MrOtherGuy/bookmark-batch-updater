@@ -6,14 +6,16 @@ function messageHandler(request,sender,sendResponse){
   if(sender.id != browser.runtime.id || sender.envType != "addon_child"){
       return
   }
-  let button = document.querySelector("#updateButton");
+  let button = document.querySelector("#almostUpdateButton");
   switch(request.type){
     case "scan":
     
-      document.querySelector("#bookmarkCount").textContent = request.length; 
+      document.body.setAttribute("style",`--bmb-bookmark-count:'${request.length}'`);
+      
       if(request.success){
         button.removeAttribute("disabled");
         setStatus("Scan complete");
+        document.querySelector("#domainText").textContent = request.domain || "";
         browser.runtime.sendMessage({operation:"list"})
         .then((response)=>(console.log(response)))
       }else{
@@ -30,7 +32,6 @@ function messageHandler(request,sender,sendResponse){
         setStatus(`Update failed: Failure @${request.length}`," ");
       }
       button.setAttribute("disabled","true");
-      button.textContent = "Update bookmarks";
       document.querySelector("#scanButton").removeAttribute("disabled");
       clearInterval(INTERVAL);
       break;
@@ -44,6 +45,7 @@ function messageHandler(request,sender,sendResponse){
 }
 
 function listBookmarks(list){
+  
   let listParent = document.querySelector("#bmList");
   while(listParent.children.length > 0){
     listParent.removeChild(listParent.children[0]);
@@ -67,7 +69,6 @@ function setStatus(str,progress){
 function requestScan(e){
   e.target.textContent = "Scanning...";
   let domain = String(document.querySelector("#domainFilter").value) || null;
-  //let scanning = initScan(domain);
   
   browser.runtime.sendMessage({operation:"scan",domain:domain})
   .then(
@@ -75,35 +76,11 @@ function requestScan(e){
       setStatus(`${response.ok?"Please wait...":"Error"}:${response.message}`);
     },
     (error)=>(setStatus("something went wrong"))
-    );
-  /*
-  scanning.then((bookmarks) => {
-    e.target.textContent = "Scan bookmarks";
-    document.querySelector("#domainText").textContent = domain || "";
-    document.querySelector("#bookmarkCount").textContent = bookmarks.collection.length;
-    //console.log(bookmarks.collection);
-    
-    let bmList = document.querySelector("#bmList");
-    while(bmList.firstChild){
-      bmList.removeChild(bmList.firstChild);
-    }
-    for(let bookmark of bookmarks.collection){
-      let div = document.createElement("div");
-      div.textContent=bookmark.url;
-      bmList.appendChild(div);
-    }
-    let button = document.querySelector("#updateButton");
-    button.removeAttribute("disabled");
-    button.addEventListener("click",updateBookmarks);
-    scannedBookmarks = bookmarks;
-  },
-  (error)=>(console.log(error),scannedBookmarks = null,document.querySelector("#updateButton").setAttribute("disabled","true"))
-  );*/
+  );
 }
 
 function initView(state){
   setStatus(state.message,state.progress);
-  document.querySelector("#updateButton").textContent = "Updating...";
   document.querySelector("#scanButton").setAttribute("disabled","true");
 }
 
@@ -115,7 +92,6 @@ async function statusCheck(){
 }
 
 function requestUpdate(e){
-  e.target.textContent = "Updating...";
   browser.runtime.sendMessage({operation:"update"})
   .then(
     (response)=>{
@@ -124,19 +100,24 @@ function requestUpdate(e){
         INTERVAL = setInterval(statusCheck,300)
       }else{
         setStatus(`Error:${response.message}`);
-        let button = document.querySelector("#updateButton");
-        button.textContent = "Update bookmarks";
-        button.setAttribute("disabled","true");
+        document.querySelector("#almostUpdateButton").setAttribute("disabled","true");
       }
       
     },
     (error)=>(setStatus("something went wrong"))
-    );
+  )
+  .finally(()=>(document.querySelector("#updateWarning").classList.add("hidden")))
 }
+
+function showUpdateButton(){
+  document.querySelector("#updateWarning").classList.remove("hidden")
+}
+
 document.onreadystatechange = function () {
   if (document.readyState === "complete") {
     document.querySelector("#scanButton").addEventListener("click",requestScan);
     document.querySelector("#updateButton").addEventListener("click",requestUpdate);
+    document.querySelector("#almostUpdateButton").addEventListener("click",showUpdateButton);
     browser.runtime.onMessage.addListener(messageHandler);
     // Ask status from background
     browser.runtime.sendMessage({operation:"status"})

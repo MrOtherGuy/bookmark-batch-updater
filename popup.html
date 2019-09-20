@@ -6,18 +6,28 @@
   <meta charset="UTF-8">
   <script type="text/javascript" src="popup-script.js"></script>
   <style>
-  body{ min-height: 260px }
+  body{ min-height: 260px; --bmb-bookmark-count: ""; will-change: --bmb-bookmark-count }
   #domainText:not(:empty)::before{content:"@"}
-  body > h2:first-child{ padding: 0 18ch }
+  body > h2:first-child{ padding: 0 8ch; margin-inline: auto }
+  .bmCount::before{ content: var(--bmb-bookmark-count) }
+  .hidden{ opacity: 0; transform: rotateX(90deg); height: 0px }
+  #updateWarning{ transition: height 200ms ease-in, opacity 200ms ease-in; width: 80%; max-width: 600px; margin-inline: auto; transform-origin: top }
+  #bmList > div{ max-width: 550px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap  }
   </style>
 </head>
 <body>
   <h2>Bookmark batch updater</h2> 
   <button id="scanButton">Scan bookmarks</button>
-  <button id="updateButton" disabled="true">Update bookmarks</button>
+  <button id="almostUpdateButton" disabled="true">Update bookmarks</button>
+  <div id="updateWarning" class="hidden">
+  <p>Attention!</p>
+  <p>This operation replaces <span class="bmCount"></span> bookmark(s) and cannot be undone.</p>
+  <p>You may want to consider backing up your bookmarks before starting the update. To do so, open the bookmark manager (Ctrl/Command + Shift + B). Use the Import and Backup button from the top toolbar.</p>
+  <button id="updateButton" tabindex="-1">Update already!</button>
+  </div>
   <p id="statusbar"><span id="messageBox"></span><span id="progressBox"></span></p>
   <input id="domainFilter" type="text" placeholder="Input domain name to filter results i.e. 'imgur.com'"></input>
-  <p id="nBookmarks">Number of 'http:' bookmarks <span id="domainText"></span>:<span id="bookmarkCount"></span></p>
+  <p id="nBookmarks">Number of 'http:' bookmarks <span id="domainText"></span>:<span class="bmCount"></span></p>
   <p id="bmList"></p>
 </body>
 </html>

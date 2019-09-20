@@ -15,7 +15,6 @@ let BMU = new (function(){
     if(sender.id != browser.runtime.id || sender.envType != "addon_child" || !request.operation){
       return
     }
-    //let response = { ok:!this.pendingOperations };
     
     
     switch(request.operation){
@@ -24,19 +23,16 @@ let BMU = new (function(){
         this.print("received scan request");
         sendResponse({ok:!this.pendingOperations,message:`${this.pendingOperations} is in progress`});
         this.scan(request.domain);
-        // TODO
         break;
       case "status":
         this.print("received status query");
         sendResponse({ok:true,busy:!!this.pendingOperations,message:`${this.pendingOperations} is in progress`,progress:`${this.progress.get()}%`});
-        // TODO
         break;
       case "update":
         this.print("received update request");
         let ok = (!this.pendingOperations &&  (this.scannedBookmarks.collection && this.scannedBookmarks.collection.length > 0));
         sendResponse({ok:ok,message:this.pendingOperations?`${this.pendingOperations} is in progress`:!this.scannedBookmarks?"Bookmarks haven't been scanned yet":this.scannedBookmarks.collection.length > 0?"":"No bookmarks to update"});
         ok && this.update();
-        // TODO
         break;
       case "list":
         this.print("received scanned list request");
@@ -46,7 +42,6 @@ let BMU = new (function(){
         break;
       default:
         this.print("received some random request");
-        // TODO
         return
     }
     
@@ -114,7 +109,7 @@ let BMU = new (function(){
     )
     .finally(()=>{
       this.pendingOperations = "";
-      browser.runtime.sendMessage({type:"scan",success:!(this.scannedBookmarks===null),length:this.scannedBookmarks.collection.length});
+      browser.runtime.sendMessage({type:"scan",success:!(this.scannedBookmarks===null),length:this.scannedBookmarks.collection.length,domain:domain});
     })
   }
   
@@ -160,7 +155,4 @@ let BMU = new (function(){
   browser.runtime.onMessage.addListener(this.messageHandler.bind(this));
 
 })();
-
-
-// Listen for messages from frame_script.js
 
