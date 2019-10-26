@@ -1,10 +1,10 @@
 {
-  "description": "scan and update bookmarks to use https instead of http",
+  "description": "Utility to change them use https: instead of http: or to replace some domain with another",
 	"author": "MrOtherGuy",
   "manifest_version": 2,
   "name": "bookmark batch-updater",
   "permissions": ["bookmarks"],
-  "version": "0.4",
+  "version": "0.5",
   "browser_action": {
       "default_title": "bookmark batch-updater",
 			"browser_style": true,
