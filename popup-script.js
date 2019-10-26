@@ -66,14 +66,27 @@ function setStatus(str,progress){
   }
 }
 
+function selectType(){
+  return document.querySelector(".radio:checked").value
+}
+
 function requestScan(e){
   e.target.textContent = "Scanning...";
   let domain = String(document.querySelector("#domainFilter").value) || null;
-  
-  browser.runtime.sendMessage({operation:"scan",domain:domain})
+  let replacer = String(document.querySelector("#domainReplace").value) || null;
+  let type = selectType();
+  browser.runtime.sendMessage({operation:"scan",properties:{type:selectType(),fromDomain:domain,toDomain:replacer}})
   .then(
     (response)=>{
-      setStatus(`${response.ok?"Please wait...":"Error"}:${response.message}`);
+      if(response.ok){
+        setStatus("Please wait");
+      }else{
+        e.target.textContent = "Scan Bookmarks";
+        setStatus(`Error: ${response.message}`);
+        listBookmarks([]);
+        document.body.setAttribute("style","--bmb-bookmark-count:'0'");
+      }
+      //setStatus(`${response.ok?"Please wait...":"Error"}:${response.message}`);
     },
     (error)=>(setStatus("something went wrong"))
   );
@@ -118,6 +131,12 @@ document.onreadystatechange = function () {
     document.querySelector("#scanButton").addEventListener("click",requestScan);
     document.querySelector("#updateButton").addEventListener("click",requestUpdate);
     document.querySelector("#almostUpdateButton").addEventListener("click",showUpdateButton);
+    
+    document.querySelectorAll(".radio").forEach((r)=>{
+      r.addEventListener("change",()=>(r.checked&&document.querySelector("#almostUpdateButton").setAttribute("disabled","true")))
+      
+    })
+    
     browser.runtime.onMessage.addListener(messageHandler);
     // Ask status from background
     browser.runtime.sendMessage({operation:"status"})

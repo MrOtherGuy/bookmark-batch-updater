@@ -15,13 +15,18 @@
   button[disabled]{ opacity: 0.5 }
   button:not([disabled]):hover{ border-color: #A0C0FF; background-color: rgba(167,167,200,0.5) }
   
-  body{ min-height: 260px; --bmb-bookmark-count: ""; will-change: --bmb-bookmark-count }
+  body{ min-height: 260px; --bmb-bookmark-count: ""; will-change: --bmb-bookmark-count; padding-inline: 4ch }
   #domainText:not(:empty)::before{content:"@"}
-  body > h2:first-child{ padding: 0 8ch; margin-inline: auto }
+  body > h2:first-child{ padding: 0 8ch; margin-inline: auto; }
   .bmCount::before{ content: var(--bmb-bookmark-count) }
   .hidden{ opacity: 0; transform: rotateX(90deg); height: 0px }
   #updateWarning{ transition: height 200ms ease-in, opacity 200ms ease-in; width: 80%; max-width: 600px; margin-inline: auto; transform-origin: top }
-  #bmList > div{ max-width: 550px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap  }
+  #bmList > div{ max-width: 550px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+  .controls{ display: flex; flex-wrap: wrap }
+  .controls > input[type="text"]{ width:80%; flex-grow:0; margin-block: 0.5em }
+  .radio:first-of-type:checked~#domainReplace{ display:none }
+  .controls > span{ margin-inline-end: 4ch; }
+  .spring{ flex-grow:1; min-width: 20ch }
   </style>
 </head>
 <body>
@@ -37,8 +42,15 @@
     <button id="updateButton" tabindex="-1">Update already!</button>
   </div>
   <p id="statusbar"><span id="messageBox"></span><span id="progressBox"></span></p>
-  <input id="domainFilter" type="text" placeholder="Input domain name to filter results i.e. 'imgur.com'"></input>
-  <p id="nBookmarks">Number of 'http:' bookmarks <span id="domainText"></span>:<span class="bmCount"></span></p>
+  <div class="controls">
+  <span>Select scan type:</span>
+  <input type="radio" class="radio" name="scanType" value="protocol" checked>Protocol</input>
+  <input type="radio" class="radio" name="scanType" value="domain">Domain</input>
+  <div class="spring"></div>
+  <input id="domainFilter" type="text" placeholder="Domain name to filter results i.e. 'imgur.com'"></input>
+  <input id="domainReplace" type="text" placeholder="Domain name to replace results i.e. 'imgur.com'"></input>
+  </div>
+  <p id="nBookmarks">Number of matching bookmarks <span id="domainText"></span>:<span class="bmCount"></span></p>
   <p id="bmList"></p>
 </body>
 </html>
