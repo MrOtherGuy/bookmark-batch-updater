@@ -86,7 +86,6 @@ function requestScan(e){
         listBookmarks([]);
         document.body.setAttribute("style","--bmb-bookmark-count:'0'");
       }
-      //setStatus(`${response.ok?"Please wait...":"Error"}:${response.message}`);
     },
     (error)=>(setStatus("something went wrong"))
   );

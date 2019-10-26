@@ -2,7 +2,6 @@
 
 let BMU = new (function(){
 
-  //this.pendingOperations = "";
   this.scannedBookmarks = null;
   this.operations = {
     running:"",
@@ -16,11 +15,7 @@ let BMU = new (function(){
     },
     type:null,
     operands: new Array(2)
-    
-    
   }
-  /*
-  this.progress = { current:null, target:null, get : ()=> ((!this.progress.current || !this.progress.target) ? 0 : Math.ceil(100*(this.progress.current/this.progress.target))) };*/
   
   this.debug = true;
   
@@ -29,7 +24,6 @@ let BMU = new (function(){
   this.isOpValid = function(obj){
     
     let initOps = this.operations;
-    //let state = initOps.running;
     let rv = {ok:false};
     if(initOps.running){
       rv.message = `${initOps.running} is running`;
@@ -39,7 +33,6 @@ let BMU = new (function(){
       case "scan":
         rv.ok = !rv.message;
         if(rv.ok){
-          //console.log(obj.properties);
           if(obj.properties.type === "protocol"){
             initOps.type = "protocol";
             initOps.operands[0] = obj.properties.fromDomain || null;
@@ -52,12 +45,7 @@ let BMU = new (function(){
             if(!rv.ok){
               rv.message = "input or output domain is not defined"
             }
-          }
-          /*if(obj.properties.type === "protocol" || obj.properties.type === "domain"){
-            this.operations.type = obj.properties.type;
-            this.operations.operands[0] = obj.properties.fromDomain || null;
-            this.operations.operands[1] = obj.properties.toDomain || null;
-          }*/else{
+          }else{
             rv.message = "unknown scan type"; 
             rv.ok = false;
           }
@@ -65,7 +53,6 @@ let BMU = new (function(){
         break;
       case "status":
         rv.ok = true;
-        //rv.message = ``;
         rv.busy = !!rv.message;
         rv.progress = `${initOps.progress.get()}%`;
         break;
@@ -76,7 +63,6 @@ let BMU = new (function(){
             rv.ok = false;
             rv.message = "no scanned bookmarks to update"
           }
-          //rv.ok = this.scannedBookmarks.collection && this.scannedBookmarks.collection.length > 0));
           if(initOps.type === "domain"){
             rv.ok = initOps.operands[0] && initOps.operands[1];
             if(!rv.ok){
@@ -93,7 +79,6 @@ let BMU = new (function(){
             rv.message = "Bookmarks haven't been scanned yet";
           }
         }
-        //rv.ok = (!initOps.running && !!this.scannedBookmarks);
         break;
       default:
         this.print(`Error determining op ${obj.operation}`)
@@ -113,28 +98,20 @@ let BMU = new (function(){
       case "scan":
       
         this.print("received scan request");
-        //let isOk = this.isOpValid(request);
-        //sendResponse({ok:!this.operations.running,message:`${this.operations.running} is in progress`});
-        //sendResponse({ok:isOk,message:`${this.operations.running} is in progress`});
         sendResponse(result);
         result.ok && this.scan(request.properties);
         break;
       case "status":
         this.print("received status query");
-        //sendResponse({ok:true,busy:!!this.operations.running,message:`${this.operations.running} is in progress`,progress:`${this.operations.progress.get()}%`});
         sendResponse(result);
         break;
       case "update":
         this.print("received update request");
-        //let ok = this.isOpValid(request);
-        //sendResponse({ok:isOk,message:this.operations.running?`${this.operations.running} is in progress`:!this.scannedBookmarks?"Bookmarks haven't been scanned yet":this.scannedBookmarks.collection.length > 0?"":"No bookmarks to update"});
         sendResponse(result);
         result.ok && this.update();
         break;
       case "list":
         this.print("received scanned list request");
-        //let shouldList = (!this.operations.running && !!this.scannedBookmarks);
-        //sendResponse({ok:isOk,message:this.operations.running?"busy":!!this.scannedBookmarks?"":"Bookmarks haven't been scanned yet"})
         sendResponse(result);
         result.ok && this.createBookmarkList();
         break;
@@ -165,7 +142,6 @@ let BMU = new (function(){
     browser.runtime.sendMessage({type:"list",list:list});
   };
   
-  // This expects url that starts with "http://"
   this.parseDomain = function(url){
     let start = url.indexOf("//") + 2;
     let end = url.indexOf("/",start);
@@ -178,7 +154,7 @@ let BMU = new (function(){
   
   this.isBookmarkATarget = function(node,ref){
     let rv = false;
-    let domain = this.operations.operands[0]; // This has been set before by this.isOpValid
+    let domain = this.operations.operands[0]; // This has been set earlier by this.isOpValid()
     switch(ref.options.type){
       case "protocol":
         return (/^http:/).test(node.url) && (domain === null || this.parseDomain(node.url).endsWith(domain))
@@ -207,27 +183,12 @@ let BMU = new (function(){
         if( this.isBookmarkATarget(node,ref) ){
           ref.collection.push(node);
         }
-        /*if((/^http:/).test(node.url)){
-          let domain = this.parseDomain(node.url);
-          if(ref.domain === null || domain.endsWith(ref.domain)){
-            ref.collection.push(node);
-          }
-        }*/
       }
     }
     return ref;
   }
-  /*
-  Options should be
-  {
-    action: "protocol"||"domain",
-    domain: <domain url>
-    
-  }
-  
-  
-  */
-  this.scan = async function(options/* domain */){
+
+  this.scan = async function(options){
     this.operations.running = "scan";
     (function(){
       return new Promise((resolve,reject) => {
