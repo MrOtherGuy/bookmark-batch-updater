@@ -24,7 +24,9 @@
   #bmList > div{ max-width: 90ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
   .controls{ display: flex; flex-wrap: wrap; max-width: 80ch }
   .controls > input[type="text"]{ width:100%; flex-grow:0; margin-block: 0.2em }
-  .radio:first-of-type:checked~#domainReplace{ display:none }
+  #protocolRadio:checked~#domainReplace,
+  #regexpRadio:not(:checked)~#regexpFilter,
+  #regexpRadio:checked~#domainFilter{ display:none }
   .controls > span{ margin-inline-end: 4ch; }
   .spring{ flex-grow:1; min-width: 20ch }
   </style>
@@ -48,8 +50,11 @@
   <label for="protocolRadio">http:-to-https:</label>
   <input type="radio" id="domainRadio" class="radio" name="scanType" value="domain"></input>
   <label for="domainRadio">replace domain</label>
+  <input type="radio" id="regexpRadio" class="radio" name="scanType" value="regexp"></input>
+  <label for="regexpRadio">RegExp</label>
   <div class="spring"></div>
   <input id="domainFilter" type="text" placeholder="Domain name to search for - i.e. 'imgur.com'"></input>
+  <input id="regexpFilter" type="text" placeholder="RegExp to search for"></input>
   <input id="domainReplace" type="text" placeholder="Domain name to replace results with - i.e. 'imgur.com'"></input>
   </div>
   <p id="nBookmarks">Number of matching bookmarks <span id="domainText"></span>:<span class="bmCount"></span></p>

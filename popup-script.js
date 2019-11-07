@@ -72,9 +72,12 @@ function selectType(){
 
 function requestScan(e){
   e.target.textContent = "Scanning...";
-  let domain = String(document.querySelector("#domainFilter").value) || null;
-  let replacer = String(document.querySelector("#domainReplace").value) || null;
+  
   let type = selectType();
+  
+  let domain = type === "regexp" ? String(document.querySelector("#regexpFilter").value) : String(document.querySelector("#domainFilter").value) || null;
+  let replacer = String(document.querySelector("#domainReplace").value) || null;
+  
   browser.runtime.sendMessage({operation:"scan",properties:{type:selectType(),fromDomain:domain,toDomain:replacer}})
   .then(
     (response)=>{
@@ -140,5 +143,9 @@ document.onreadystatechange = function () {
     // Ask status from background
     browser.runtime.sendMessage({operation:"status"})
     .then((state)=>{if(state.busy){initView(state);INTERVAL=setInterval(statusCheck,300)}})
+      
+    window.addEventListener("unload",function(e){
+      browser.runtime.sendMessage({operation:"reset"})
+    })
   }
 }

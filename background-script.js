@@ -33,21 +33,38 @@ let BMU = new (function(){
       case "scan":
         rv.ok = !rv.message;
         if(rv.ok){
-          if(obj.properties.type === "protocol"){
-            initOps.type = "protocol";
-            initOps.operands[0] = obj.properties.fromDomain || null;
-            initOps.operands[1] = null;
-          }else if(obj.properties.type === "domain"){
-            initOps.type = "domain";
-            initOps.operands[0] = obj.properties.fromDomain || null;
-            initOps.operands[1] = obj.properties.toDomain || null;
-            rv.ok = (initOps.operands[0] && initOps.operands[1]);
-            if(!rv.ok){
-              rv.message = "input or output domain is not defined"
-            }
-          }else{
-            rv.message = "unknown scan type"; 
-            rv.ok = false;
+          switch(obj.properties.type){
+            case "protocol":
+              initOps.type = "protocol";
+              initOps.operands[0] = obj.properties.fromDomain || null;
+              initOps.operands[1] = null;
+              break;
+            case "domain":
+              initOps.type = "domain";
+              initOps.operands[0] = obj.properties.fromDomain || null;
+              initOps.operands[1] = obj.properties.toDomain || null;
+              rv.ok = (initOps.operands[0] && initOps.operands[1]);
+              if(!rv.ok){
+                rv.message = "input or output domain is not defined"
+              }
+              break;
+            case "regexp":
+              initOps.type = "regexp";
+              try{
+                initOps.operands[0] = obj.properties.fromDomain.length > 0 ? new RegExp(obj.properties.fromDomain) : null;
+              }catch(e){
+                rv.ok = false;
+                rv.message = "invalid regular expression"
+              }
+              initOps.operands[1] = obj.properties.toDomain || null;
+              rv.ok = (initOps.operands[0] && initOps.operands[1]);
+              if(!rv.ok){
+                rv.message += ";input or output operand is not defined"
+              }
+              break;
+            default:
+              rv.message = "unknown scan type"; 
+              rv.ok = false;
           }
         }
         break;
@@ -79,6 +96,9 @@ let BMU = new (function(){
             rv.message = "Bookmarks haven't been scanned yet";
           }
         }
+        break;
+      case "reset":
+        rv.ok = !initOps.running;
         break;
       default:
         this.print(`Error determining op ${obj.operation}`)
@@ -114,6 +134,9 @@ let BMU = new (function(){
         this.print("received scanned list request");
         sendResponse(result);
         result.ok && this.createBookmarkList();
+        break;
+      case "reset":
+        result.ok && this.reset();
         break;
       default:
         this.print("received some random request");
@@ -162,6 +185,8 @@ let BMU = new (function(){
       case "domain":
         return this.parseDomain(node.url).endsWith(domain);
         break;
+      case "regexp":
+        return domain.test(node.url)
       default:
         break;
     }
@@ -172,7 +197,7 @@ let BMU = new (function(){
   
   this.traverseBookmarkTree = async function(tree,ref){
     // skip scanning if operation is not supported
-    if(ref.options.type != "protocol" && ref.options.type != "domain"){
+    if(ref.options.type != "protocol" && ref.options.type != "domain" && ref.options.type != "regexp"){
       console.log("error traversing")
       return ref
     }
@@ -208,15 +233,18 @@ let BMU = new (function(){
     })
   }
   
+  this.reset = function(){
+    console.log("resetting...");
+    if(!this.operations.running){
+      this.operations.progress.current = null;
+      this.operations.progress.target = null;
+      this.scannedBookmarks = null
+      this.operations.type = null;
+    }
+  }
+  
   this.update = async function(){
     
-    const clear = function(o){
-      o.operations.progress.current = null;
-      o.operations.progress.target = null;
-      o.scannedBookmarks = null
-      o.operations.running = "";
-      o.operations.type = null;
-    };
     if(this.scannedBookmarks === null){
       return
     }
@@ -224,7 +252,7 @@ let BMU = new (function(){
     this.operations.progress.target = this.scannedBookmarks.collection.length;
     
     let replacer = new Array(2);
-    if(this.operations.type === "domain"){
+    if(this.operations.type === "domain" || this.operations.type === "regexp"){
       replacer[0] = this.operations.operands[0];
       replacer[1] = this.operations.operands[1];
     }else if(this.operations.type === "protocol"){
@@ -243,18 +271,24 @@ let BMU = new (function(){
       Promise.all(bookmarkPromises)
       .then((values)=>{
         browser.runtime.sendMessage({type:"update",success:true,length:this.operations.progress.current});
-        clear(this);
+        
+        this.operations.running = "";
+        this.reset();
       })
       .catch((error) => {
         browser.runtime.sendMessage({type:"update",success:false,length:this.operations.progress.current});
         this.print("update error");
         console.log(error);
-        clear(this)
+        
+        this.operations.running = "";
+        this.reset();
       })
     
     }catch(err){
       console.log(err);
-      clear(this);
+      
+      this.operations.running = "";
+      this.reset();
     }
     
   }
