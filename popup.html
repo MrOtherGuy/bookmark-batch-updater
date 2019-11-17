@@ -16,9 +16,9 @@
   button:not([disabled]):hover{ border-color: #A0C0FF; background-color: rgba(167,167,200,0.5) }
   
   body{ min-height: 260px; --bmb-bookmark-count: ""; will-change: --bmb-bookmark-count; padding-inline: 4ch }
-  #domainText:not(:empty)::before{content:"@"}
+  #domainText:not(:empty)::before{content:"matching"; padding-inline: 1ch}
   body > h2:first-child{ padding: 0 8ch; margin-inline: auto; }
-  .bmCount::before{ content: var(--bmb-bookmark-count) }
+  .bmCount::before{ content: var(--bmb-bookmark-count); padding-inline-start: 1ch }
   .hidden{ opacity: 0; transform: rotateX(90deg); height: 0px }
   #updateWarning{ transition: height 200ms ease-in, opacity 200ms ease-in; width: 80%; max-width: 90ch; margin-inline: auto; transform-origin: top }
   #bmList > div{ max-width: 90ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
@@ -57,7 +57,7 @@
   <input id="regexpFilter" type="text" placeholder="RegExp to search for"></input>
   <input id="domainReplace" type="text" placeholder="Domain name to replace results with - i.e. 'imgur.com'"></input>
   </div>
-  <p id="nBookmarks">Number of matching bookmarks <span id="domainText"></span>:<span class="bmCount"></span></p>
+  <p><span id="nBookmarks"></span><span id="domainText"></span><span class="bmCount"></span></p>
   <p id="bmList"></p>
 </body>
 </html>

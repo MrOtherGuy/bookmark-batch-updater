@@ -14,10 +14,10 @@ function messageHandler(request,sender,sendResponse){
       
       if(request.success){
         button.removeAttribute("disabled");
-        setStatus("Scan complete");
+        setStatus("Scan complete",false,"Number of matching bookmarks");
         document.querySelector("#domainText").textContent = request.domain || "";
         browser.runtime.sendMessage({operation:"list"})
-        .then((response)=>(console.log(response)))
+        // background will send the list soon after
       }else{
         button.setAttribute("disabled","true");
         setStatus("Scan failed");
@@ -26,10 +26,13 @@ function messageHandler(request,sender,sendResponse){
       
       break;
     case "update":
+
       if(request.success){
         setStatus(`Update success:${request.length} bookmarks were updated`," ");
       }else{
-        setStatus(`Update failed: Failure @${request.length}`," ");
+        let fails = request.failures ? request.failures.length : 0;
+        setStatus(`Update finished with ${request.length - fails} success and ${request.failures.length} failures`," ","Failed operations");
+        listBookmarks(request.failures);
       }
       button.setAttribute("disabled","true");
       document.querySelector("#scanButton").removeAttribute("disabled");
@@ -57,12 +60,15 @@ function listBookmarks(list){
   }
 }
 
-function setStatus(str,progress){
-  if(str){
-    document.querySelector("#messageBox").textContent = str;
+function setStatus(message,progress,listContext){
+  if(message){
+    document.querySelector("#messageBox").textContent = message;
   }
   if(progress){
     document.querySelector("#progressBox").textContent = progress;
+  }
+  if(listContext){
+    document.querySelector("#nBookmarks").textContent = listContext;
   }
 }
 
@@ -102,7 +108,7 @@ function initView(state){
 async function statusCheck(){
   browser.runtime.sendMessage({operation:"status"})
   .then(
-    (message)=>(setStatus("Progress: ",message.progress))
+    (message)=>(message.busy && setStatus("Progress: ",message.progress))
   )
 }
 

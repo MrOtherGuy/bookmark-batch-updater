@@ -136,6 +136,7 @@ let BMU = new (function(){
         result.ok && this.createBookmarkList();
         break;
       case "reset":
+        this.print("received reset request");
         result.ok && this.reset();
         break;
       default:
@@ -243,6 +244,17 @@ let BMU = new (function(){
     }
   }
   
+  this.isValidURL = function(url,hasNoBackslash){
+    let rv = true;
+    try{
+      let d = new URL(url);
+      rv = !d.host.startsWith(".") && !d.host.endsWith(".") && d.host.indexOf("..") === -1;
+    }catch(e){
+      rv = false
+    }
+    return rv && (!hasNoBackslash || url.indexOf("\\") === -1)
+  }
+  
   this.update = async function(){
     
     if(this.scannedBookmarks === null){
@@ -250,47 +262,44 @@ let BMU = new (function(){
     }
     this.operations.running = "update";
     this.operations.progress.target = this.scannedBookmarks.collection.length;
-    
+    const IS_DOMAIN_OR_REGEXP = (this.operations.type === "domain" || this.operations.type === "regexp");
     let replacer = new Array(2);
-    if(this.operations.type === "domain" || this.operations.type === "regexp"){
+    if(IS_DOMAIN_OR_REGEXP){
       replacer[0] = this.operations.operands[0];
       replacer[1] = this.operations.operands[1];
     }else if(this.operations.type === "protocol"){
       replacer[0] = /^http:/;
       replacer[1] = "https:";
     }
+    // This is necessary to get around an issue when Promise.all may resolve too fast is all bookmarks fail to update, which in turn confuses the popup ui.
+    let bookmarkPromises = [new Promise((resolve)=>(setTimeout(()=>(resolve(1)),100)))];
     
-    
-    try{
-      let bookmarkPromises = [];
-      for(let bm of this.scannedBookmarks.collection ){
-        let updating = browser.bookmarks.update(bm.id,{url:bm.url.replace(replacer[0],replacer[1])});
+    let failures = [];
+    let success = false;
+    for(let bm of this.scannedBookmarks.collection ){
+      let newUrl = bm.url.replace(replacer[0],replacer[1]);
+      if(!IS_DOMAIN_OR_REGEXP || this.isValidURL(newUrl,bm.url.indexOf("\\" === -1))){
+        let updating = browser.bookmarks.update(bm.id,{url:newUrl});
+
+        // This error should only happen if the bookmark to be updated is no longer available when the update is being run but it was available when scanning
+        updating
+        .catch((e)=>(failures.push(`invalid id: ${bm.id}`),true))
+        .finally(()=>(this.operations.progress.current++));
+        
         bookmarkPromises.push(updating);
-        updating.then(()=>(this.operations.progress.current++))
+        
+      }else{
+        failures.push(`invalid url: ${newUrl}`);
+        this.operations.progress.current++
       }
-      Promise.all(bookmarkPromises)
-      .then((values)=>{
-        browser.runtime.sendMessage({type:"update",success:true,length:this.operations.progress.current});
-        
-        this.operations.running = "";
-        this.reset();
-      })
-      .catch((error) => {
-        browser.runtime.sendMessage({type:"update",success:false,length:this.operations.progress.current});
-        this.print("update error");
-        console.log(error);
-        
-        this.operations.running = "";
-        this.reset();
-      })
-    
-    }catch(err){
-      console.log(err);
-      
+    }
+    Promise.all(bookmarkPromises)
+    .then(()=>{ success = true })
+    .then(()=>{
+      browser.runtime.sendMessage({type:"update",success:(success && !failures.length),length:this.operations.progress.current,failures:failures.length?failures:null});
       this.operations.running = "";
       this.reset();
-    }
-    
+    })
   }
 
   browser.runtime.onMessage.addListener(this.messageHandler.bind(this));
