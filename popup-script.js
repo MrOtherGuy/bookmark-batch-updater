@@ -6,7 +6,7 @@ function messageHandler(request,sender,sendResponse){
   if(sender.id != browser.runtime.id || sender.envType != "addon_child"){
       return
   }
-  let button = document.querySelector("#almostUpdateButton");
+  let button = DQ("#almostUpdateButton");
   switch(request.type){
     case "scan":
     
@@ -15,14 +15,14 @@ function messageHandler(request,sender,sendResponse){
       if(request.success){
         button.removeAttribute("disabled");
         setStatus("Scan complete",false,"Number of matching bookmarks");
-        document.querySelector("#domainText").textContent = request.domain || "";
+        DQ("#domainText").textContent = request.domain || "";
         browser.runtime.sendMessage({operation:"list"})
         // background will send the list soon after
       }else{
         button.setAttribute("disabled","true");
         setStatus("Scan failed");
       }
-      document.querySelector("#scanButton").textContent = "Scan bookmarks";
+      DQ("#scanButton").textContent = "Scan bookmarks";
       
       break;
     case "update":
@@ -35,7 +35,7 @@ function messageHandler(request,sender,sendResponse){
         listBookmarks(request.failures);
       }
       button.setAttribute("disabled","true");
-      document.querySelector("#scanButton").removeAttribute("disabled");
+      DQ("#scanButton").removeAttribute("disabled");
       clearInterval(INTERVAL);
       break;
     case "list":
@@ -47,33 +47,50 @@ function messageHandler(request,sender,sendResponse){
   
 }
 
+function createListItem(bm){
+  let container = document.createElement("div");
+  container.classList.add("listItem");
+
+  for(let prop in bm){
+    let t = document.createElement("div");
+    t.textContent = bm[prop];
+    container.appendChild(t)
+  }
+  return container
+}
+
 function listBookmarks(list){
   
-  let listParent = document.querySelector("#bmList");
+  let listParent = DQ("#bmList");
+  let odd = true;
   while(listParent.children.length > 0){
     listParent.removeChild(listParent.children[0]);
   }
-  for(let url of list){
-    let div = document.createElement("div");
-    div.textContent = url;
-    listParent.appendChild(div)
+  for(let bm of list){
+    let item = listParent.appendChild(createListItem(bm));
+    odd && item.classList.add("odd");
+    odd = !odd;
   }
+}
+
+function DQ(str){
+  return document.querySelector(str)
 }
 
 function setStatus(message,progress,listContext){
   if(message){
-    document.querySelector("#messageBox").textContent = message;
+    DQ("#messageBox").textContent = message;
   }
   if(progress){
-    document.querySelector("#progressBox").textContent = progress;
+    DQ("#progressBox").textContent = progress;
   }
   if(listContext){
-    document.querySelector("#nBookmarks").textContent = listContext;
+    DQ("#nBookmarks").textContent = listContext;
   }
 }
 
 function selectType(){
-  return document.querySelector(".radio:checked").value
+  return DQ(".radio:checked").value
 }
 
 function requestScan(e){
@@ -81,10 +98,24 @@ function requestScan(e){
   
   let type = selectType();
   
-  let domain = type === "regexp" ? String(document.querySelector("#regexpFilter").value) : String(document.querySelector("#domainFilter").value) || null;
-  let replacer = String(document.querySelector("#domainReplace").value) || null;
+  let op = {operation:"scan",properties:{type:type}};
+  switch(type){
+    case "domain":
+      op.properties.toDomain = String(DQ("#domainReplace").value) || null;
+    case "protocol":
+      op.properties.fromDomain = String(DQ("#domainFilter").value) || null;
+      break;
+    case "regexp":
+      op.properties.fromDomain = String(DQ("#regexpURLFilter").value);
+      op.properties.toDomain = String(DQ("#regexpURLReplace").value);
+      op.properties.fromTitle = String(DQ("#regexpTitleFilter").value);
+      op.properties.toTitle = String(DQ("#regexpTitleReplace").value);
+      break;
+    default:
+      op.properties.type = null;
+  }
   
-  browser.runtime.sendMessage({operation:"scan",properties:{type:selectType(),fromDomain:domain,toDomain:replacer}})
+  browser.runtime.sendMessage(op)
   .then(
     (response)=>{
       if(response.ok){
@@ -96,13 +127,13 @@ function requestScan(e){
         document.body.setAttribute("style","--bmb-bookmark-count:'0'");
       }
     },
-    (error)=>(setStatus("something went wrong"))
+    (error)=>(setStatus(`Error: ${error}`))
   );
 }
 
 function initView(state){
   setStatus(state.message,state.progress);
-  document.querySelector("#scanButton").setAttribute("disabled","true");
+  DQ("#scanButton").setAttribute("disabled","true");
 }
 
 async function statusCheck(){
@@ -121,27 +152,27 @@ function requestUpdate(e){
         INTERVAL = setInterval(statusCheck,300)
       }else{
         setStatus(`Error:${response.message}`);
-        document.querySelector("#almostUpdateButton").setAttribute("disabled","true");
+        DQ("#almostUpdateButton").setAttribute("disabled","true");
       }
       
     },
-    (error)=>(setStatus("something went wrong"))
+    (error)=>(setStatus(`something went wrong: ${error}`))
   )
-  .finally(()=>(document.querySelector("#updateWarning").classList.add("hidden")))
+  .finally(()=>(DQ("#updateWarning").classList.add("hidden")))
 }
 
 function showUpdateButton(){
-  document.querySelector("#updateWarning").classList.remove("hidden")
+  DQ("#updateWarning").classList.remove("hidden")
 }
 
 document.onreadystatechange = function () {
   if (document.readyState === "complete") {
-    document.querySelector("#scanButton").addEventListener("click",requestScan);
-    document.querySelector("#updateButton").addEventListener("click",requestUpdate);
-    document.querySelector("#almostUpdateButton").addEventListener("click",showUpdateButton);
+    DQ("#scanButton").addEventListener("click",requestScan);
+    DQ("#updateButton").addEventListener("click",requestUpdate);
+    DQ("#almostUpdateButton").addEventListener("click",showUpdateButton);
     
     document.querySelectorAll(".radio").forEach((r)=>{
-      r.addEventListener("change",()=>(r.checked&&document.querySelector("#almostUpdateButton").setAttribute("disabled","true")))
+      r.addEventListener("change",()=>(r.checked&&DQ("#almostUpdateButton").setAttribute("disabled","true")))
       
     })
     

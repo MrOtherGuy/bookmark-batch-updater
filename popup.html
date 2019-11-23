@@ -21,12 +21,15 @@
   .bmCount::before{ content: var(--bmb-bookmark-count); padding-inline-start: 1ch }
   .hidden{ opacity: 0; transform: rotateX(90deg); height: 0px }
   #updateWarning{ transition: height 200ms ease-in, opacity 200ms ease-in; width: 80%; max-width: 90ch; margin-inline: auto; transform-origin: top }
-  #bmList > div{ max-width: 90ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+  .listItem > div{ max-width: 90ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+  .listItem{ margin: 0.1em 0 }
+  .odd{  background-color: rgba(120,120,120,0.2) }
   .controls{ display: flex; flex-wrap: wrap; max-width: 80ch }
-  .controls > input[type="text"]{ width:100%; flex-grow:0; margin-block: 0.2em }
+  .controls input[type="text"]{ width:100%; flex-grow:0; margin-block: 0.2em }
   #protocolRadio:checked~#domainReplace,
-  #regexpRadio:not(:checked)~#regexpFilter,
-  #regexpRadio:checked~#domainFilter{ display:none }
+  #regexpRadio:not(:checked)~#regexpControls,
+  #regexpRadio:checked~#domainFilter,
+  #regexpRadio:checked~#domainReplace{ display:none }
   .controls > span{ margin-inline-end: 4ch; }
   .spring{ flex-grow:1; min-width: 20ch }
   </style>
@@ -54,8 +57,16 @@
   <label for="regexpRadio">RegExp</label>
   <div class="spring"></div>
   <input id="domainFilter" type="text" placeholder="Domain name to search for - i.e. 'imgur.com'"></input>
-  <input id="regexpFilter" type="text" placeholder="RegExp to search for"></input>
   <input id="domainReplace" type="text" placeholder="Domain name to replace results with - i.e. 'imgur.com'"></input>
+  <div id="regexpControls">
+  <p>RegExp search can be used to search bookmark url or title. If operands for both url and title are defined then the update function will update both url and title.</p>
+  <span>Search bookmark URL</span>
+  <input id="regexpURLFilter" type="text" placeholder="RegExp to search url"></input>
+  <input id="regexpURLReplace" type="text" placeholder="String to replace url match with"></input>
+  <span>Search bookmark Title</span>
+  <input id="regexpTitleFilter" type="text" placeholder="RegExp to search title"></input>
+  <input id="regexpTitleReplace" type="text" placeholder="String to replace title match with"></input>
+  </div>
   </div>
   <p><span id="nBookmarks"></span><span id="domainText"></span><span class="bmCount"></span></p>
   <p id="bmList"></p>

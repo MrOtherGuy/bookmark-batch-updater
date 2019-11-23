@@ -3,6 +3,14 @@
 let BMU = new (function(){
 
   this.scannedBookmarks = null;
+  
+  this.State = function(){
+    this.from = null;
+    this.to = null;
+    this.isValid = function(){ return !(this.from === null || this.from === undefined || this.to === null || this.to === undefined) }
+    this.clear = function(){ this.from = this.to = null }
+  };
+  
   this.operations = {
     running:"",
     progress: {
@@ -14,12 +22,75 @@ let BMU = new (function(){
       }
     },
     type:null,
-    operands: new Array(2)
+    operands: {
+      url: new this.State(),
+      title: new this.State(),
+      clear: ()=>(this.url.clear() && this.title.clear())
+    }
   }
   
   this.debug = true;
   
-  this.print = (message) => { this.debug && console.log(message) }
+  this.print = (message) => { this.debug && console.log(message) };
+
+  this.sRegexp = function(a,rv){
+    if(typeof a === "string" && a.length > 0){
+      try{
+        let s = new RegExp(a);
+        return s
+      }catch(e){
+        rv.ok = false;
+        rv.message = "invalid regular expression"
+      }
+    }
+    return null
+  }
+  
+  this.initializeOperation = function(ARGS,rv){
+    
+    const OPS = this.operations.operands;
+    const STR = (a)=>{return typeof a === "string" ? a : null};
+    
+    switch(ARGS.type){
+      case "protocol":
+        this.operations.type = "protocol";
+        OPS.url.from = STR(ARGS.fromDomain);
+        OPS.url.to = null;
+        OPS.title.from = null;
+        OPS.title.to = null;
+        break;
+      case "domain":
+        this.operations.type = "domain";
+        OPS.url.from = STR(ARGS.fromDomain);
+        OPS.url.to = STR(ARGS.toDomain) || null; // collapse to null if empty string
+        OPS.title.from = null;
+        OPS.title.to = null;
+        rv.ok = (OPS.url.isValid());
+        if(!rv.ok){
+          rv.message = "input or output domain is not defined"
+        }
+        break;
+      case "regexp":
+        this.operations.type = "regexp";
+        
+        OPS.url.from = this.sRegexp(ARGS.fromDomain);
+        OPS.title.from = this.sRegexp(ARGS.fromTitle);
+        
+        OPS.url.to = STR(ARGS.toDomain);
+        OPS.title.to = STR(ARGS.toTitle);
+        
+        rv.ok = (OPS.url.isValid() || OPS.title.isValid());
+            
+        if(!rv.ok){
+          rv.message += ";input or output operand is not defined"
+        }
+        break;
+      default:
+        rv.message = "unknown scan type"; 
+        rv.ok = false;
+    }
+    return rv
+  }
   
   this.isOpValid = function(obj){
     
@@ -33,39 +104,7 @@ let BMU = new (function(){
       case "scan":
         rv.ok = !rv.message;
         if(rv.ok){
-          switch(obj.properties.type){
-            case "protocol":
-              initOps.type = "protocol";
-              initOps.operands[0] = obj.properties.fromDomain || null;
-              initOps.operands[1] = null;
-              break;
-            case "domain":
-              initOps.type = "domain";
-              initOps.operands[0] = obj.properties.fromDomain || null;
-              initOps.operands[1] = obj.properties.toDomain || null;
-              rv.ok = (initOps.operands[0] && initOps.operands[1]);
-              if(!rv.ok){
-                rv.message = "input or output domain is not defined"
-              }
-              break;
-            case "regexp":
-              initOps.type = "regexp";
-              try{
-                initOps.operands[0] = obj.properties.fromDomain.length > 0 ? new RegExp(obj.properties.fromDomain) : null;
-              }catch(e){
-                rv.ok = false;
-                rv.message = "invalid regular expression"
-              }
-              initOps.operands[1] = obj.properties.toDomain || null;
-              rv.ok = (initOps.operands[0] && initOps.operands[1]);
-              if(!rv.ok){
-                rv.message += ";input or output operand is not defined"
-              }
-              break;
-            default:
-              rv.message = "unknown scan type"; 
-              rv.ok = false;
-          }
+          this.initializeOperation(obj.properties,rv)
         }
         break;
       case "status":
@@ -76,14 +115,20 @@ let BMU = new (function(){
       case "update":
         rv.ok = !initOps.running;
         if(rv.ok){
-          if(!(this.scannedBookmarks.collection && this.scannedBookmarks.collection.length > 0)){
+          if(!this.scannedBookmarks || this.scannedBookmarks.length === 0){
             rv.ok = false;
-            rv.message = "no scanned bookmarks to update"
+            rv.message = "no scanned bookmarks to update";
+            break;
           }
           if(initOps.type === "domain"){
-            rv.ok = initOps.operands[0] && initOps.operands[1];
+            rv.ok = (initOps.operands.url.isValid());
             if(!rv.ok){
               rv.message = "input or output domain is not defined"
+            }
+          }else if(initOps.type === "regexp"){
+            rv.ok = (initOps.operands.url.isValid() || initOps.operands.title.isValid());
+            if(!rv.ok){
+              rv.message = "missing argument for replace operation"
             }
           }
         }
@@ -146,21 +191,47 @@ let BMU = new (function(){
     
   };
   
+  
   this.createBookmarkList = async function(){
-    if(this.operations.running || !this.scannedBookmarks.collection){
+    
+    const BM = function(bm,r,extra){
+      const o = {};
+      if(r.url[0] && typeof r.url[1] === "string"){
+        if(extra){
+          o.url = `${bm.url} => ${bm.url.replace(r.url[0],r.url[1])}`;
+        }else{
+          o.url = bm.url;
+        }
+      }
+      if(r.title[0] && typeof r.title[1] === "string"){
+        if(extra){
+          o.title = `${bm.title} => ${bm.title.replace(r.title[0],r.title[1])}`;
+        }else{
+          o.title = bm.title;
+        }
+      }
+      return o
+    }
+    
+    if(this.operations.running || !this.scannedBookmarks){
       return
     }
     this.operations.running = "listing";
-    let bookmarks = this.scannedBookmarks.collection;
+    let bookmarks = this.scannedBookmarks;
+    
     let list = [];
     const END = Math.min(100,bookmarks.length);
-    let idx = 0;
+    
+    const REPLACER = this.getReplacers();
+    
+    END && list.push(BM(bookmarks[0],REPLACER,true));
+    let idx = 1;
     while(idx < END){
-      list.push(bookmarks[idx].url)
+      list.push(BM(bookmarks[idx],REPLACER))
       idx++
     }
     if (bookmarks.length > END){
-      list.push(`--- and ${bookmarks.length - END} more ---`);
+      list.push({note:`--- and ${bookmarks.length - END} more ---`});
     }
     this.operations.running = "";
     browser.runtime.sendMessage({type:"list",list:list});
@@ -178,16 +249,16 @@ let BMU = new (function(){
   
   this.isBookmarkATarget = function(node,ref){
     let rv = false;
-    let domain = this.operations.operands[0]; // This has been set earlier by this.isOpValid()
+    let queries = {url:this.operations.operands.url.from,title:this.operations.operands.title.from}; // This has been set earlier by this.isOpValid()
     switch(ref.options.type){
       case "protocol":
-        return (/^http:/).test(node.url) && (domain === null || this.parseDomain(node.url).endsWith(domain))
+        return (/^http:/).test(node.url) && (queries.url === null || this.parseDomain(node.url).endsWith(queries.url))
         break;
       case "domain":
-        return this.parseDomain(node.url).endsWith(domain);
+        return this.parseDomain(node.url).endsWith(queries.url);
         break;
       case "regexp":
-        return domain.test(node.url)
+        return queries.url ? queries.url.test(node.url) : queries.title ? queries.title.test(node.title) : false
       default:
         break;
     }
@@ -199,7 +270,7 @@ let BMU = new (function(){
   this.traverseBookmarkTree = async function(tree,ref){
     // skip scanning if operation is not supported
     if(ref.options.type != "protocol" && ref.options.type != "domain" && ref.options.type != "regexp"){
-      console.log("error traversing")
+      console.error("error traversing")
       return ref
     }
     for(let node of tree.children){
@@ -225,17 +296,17 @@ let BMU = new (function(){
     });
     }).bind(this)()
     .then(
-      (bookmarks)=>(this.scannedBookmarks = bookmarks),
+      (bookmarks)=>(this.scannedBookmarks = bookmarks.collection),
       (error)=>(this.scannedBookmarks = null)
     )
     .finally(()=>{
       this.operations.running = "";
-      browser.runtime.sendMessage({type:"scan",success:!(this.scannedBookmarks===null),length:this.scannedBookmarks.collection.length,domain:options.fromDomain});
+      browser.runtime.sendMessage({type:"scan",success:!(this.scannedBookmarks===null),length:this.scannedBookmarks?this.scannedBookmarks.length:0,domain:options.fromDomain});
     })
   }
   
   this.reset = function(){
-    console.log("resetting...");
+    this.print("resetting...");
     if(!this.operations.running){
       this.operations.progress.current = null;
       this.operations.progress.target = null;
@@ -255,31 +326,60 @@ let BMU = new (function(){
     return rv && (!hasNoBackslash || url.indexOf("\\") === -1)
   }
   
+  this.getReplacers = function(){
+    let rv = {url:new Array(2),title:new Array(2)};
+    
+    switch(this.operations.type){
+      case "protocol":
+        rv.url[0] = /^http:/;
+        rv.url[1] = "https:";
+        break;
+      case "regexp":
+        rv.title[0] = this.operations.operands.title.from;
+        rv.title[1] = this.operations.operands.title.to;
+      case "domain":
+        rv.url[0] = this.operations.operands.url.from;
+        rv.url[1] = this.operations.operands.url.to;
+        break;
+    }
+    return rv
+  }
+  
   this.update = async function(){
     
     if(this.scannedBookmarks === null){
       return
     }
     this.operations.running = "update";
-    this.operations.progress.target = this.scannedBookmarks.collection.length;
+    this.operations.progress.target = this.scannedBookmarks.length;
     const IS_DOMAIN_OR_REGEXP = (this.operations.type === "domain" || this.operations.type === "regexp");
-    let replacer = new Array(2);
-    if(IS_DOMAIN_OR_REGEXP){
-      replacer[0] = this.operations.operands[0];
-      replacer[1] = this.operations.operands[1];
-    }else if(this.operations.type === "protocol"){
-      replacer[0] = /^http:/;
-      replacer[1] = "https:";
-    }
+    let replacer = this.getReplacers();
+    
     // This is necessary to get around an issue when Promise.all may resolve too fast is all bookmarks fail to update, which in turn confuses the popup ui.
     let bookmarkPromises = [new Promise((resolve)=>(setTimeout(()=>(resolve(1)),100)))];
     
+    const CHANGES = {};
+    CHANGES.url = replacer.url[0] && replacer.url[1];
+    CHANGES.title = this.operations.type === "regexp" && replacer.title[0] && (typeof replacer.title[1] === "string") ;
+    
     let failures = [];
     let success = false;
-    for(let bm of this.scannedBookmarks.collection ){
-      let newUrl = bm.url.replace(replacer[0],replacer[1]);
-      if(!IS_DOMAIN_OR_REGEXP || this.isValidURL(newUrl,bm.url.indexOf("\\" === -1))){
-        let updating = browser.bookmarks.update(bm.id,{url:newUrl});
+    for(let bm of this.scannedBookmarks){
+      
+      let newProps = {};
+      if(CHANGES.url){
+        newProps.url = bm.url.replace(replacer.url[0],replacer.url[1]);
+        if(IS_DOMAIN_OR_REGEXP && !this.isValidURL(newProps.url,bm.url.indexOf("\\" === -1))){
+          delete newProps.url
+        }
+      }
+      if(CHANGES.title){
+        newProps.title = bm.title.replace(replacer.title[0],replacer.title[1]);
+      }
+
+      if(newProps.url || newProps.title){
+        
+        let updating = browser.bookmarks.update(bm.id,newProps);
 
         // This error should only happen if the bookmark to be updated is no longer available when the update is being run but it was available when scanning
         updating
