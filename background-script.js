@@ -8,11 +8,11 @@ let BMU = new (function(){
     this.from = null;
     this.to = null;
     this.isValid = function(){ return !(this.from === null || this.from === undefined || this.to === null || this.to === undefined) }
-    this.clear = function(){ this.from = this.to = null }
+    this.clear = function(){ return !(this.from = this.to = null) }
   };
   
   this.operations = {
-    running:"",
+    running:null,
     progress: {
       current:null,
       target:null,
@@ -25,7 +25,7 @@ let BMU = new (function(){
     operands: {
       url: new this.State(),
       title: new this.State(),
-      clear: ()=>(this.url.clear() && this.title.clear())
+      clear: function(){this.url.clear() && this.title.clear()}
     }
   }
   
@@ -233,7 +233,7 @@ let BMU = new (function(){
     if (bookmarks.length > END){
       list.push({note:`--- and ${bookmarks.length - END} more ---`});
     }
-    this.operations.running = "";
+    this.operations.running = null;
     browser.runtime.sendMessage({type:"list",list:list});
   };
   
@@ -300,18 +300,21 @@ let BMU = new (function(){
       (error)=>(this.scannedBookmarks = null)
     )
     .finally(()=>{
-      this.operations.running = "";
+      this.operations.running = null;
       browser.runtime.sendMessage({type:"scan",success:!(this.scannedBookmarks===null),length:this.scannedBookmarks?this.scannedBookmarks.length:0,domain:options.fromDomain});
     })
   }
   
-  this.reset = function(){
+  this.reset = function(force){
     this.print("resetting...");
-    if(!this.operations.running){
+    if(force || !this.operations.running){
       this.operations.progress.current = null;
       this.operations.progress.target = null;
       this.scannedBookmarks = null
       this.operations.type = null;
+      this.operations.operands.clear();
+    }else{
+      this.print(`reset was ignored due to pending ${this.running} operation`)  
     }
   }
   
@@ -319,7 +322,10 @@ let BMU = new (function(){
     let rv = true;
     try{
       let d = new URL(url);
-      rv = !d.host.startsWith(".") && !d.host.endsWith(".") && d.host.indexOf("..") === -1;
+      rv =   !d.host.startsWith(".")
+          && !d.host.endsWith(".")
+          && d.host.indexOf("..") === -1
+          && !d.pathname.startsWith("//");
     }catch(e){
       rv = false
     }
@@ -367,9 +373,11 @@ let BMU = new (function(){
     for(let bm of this.scannedBookmarks){
       
       let newProps = {};
+      let failedURL;
       if(CHANGES.url){
         newProps.url = bm.url.replace(replacer.url[0],replacer.url[1]);
         if(IS_DOMAIN_OR_REGEXP && !this.isValidURL(newProps.url,bm.url.indexOf("\\" === -1))){
+          failedURL = newProps.url;
           delete newProps.url
         }
       }
@@ -378,27 +386,31 @@ let BMU = new (function(){
       }
 
       if(newProps.url || newProps.title){
-        
-        let updating = browser.bookmarks.update(bm.id,newProps);
+        const ID = bm.id;
+        let updating = browser.bookmarks.update(ID,newProps);
 
         // This error should only happen if the bookmark to be updated is no longer available when the update is being run but it was available when scanning
         updating
-        .catch((e)=>(failures.push(`invalid id: ${bm.id}`),true))
+        .catch((e)=>(failures.push({error:`invalid id: ${ID}`}),true))
         .finally(()=>(this.operations.progress.current++));
         
         bookmarkPromises.push(updating);
         
       }else{
-        failures.push(`invalid url: ${newUrl}`);
+        failures.push({error:`invalid url: ${failedURL}`});
         this.operations.progress.current++
       }
     }
     Promise.all(bookmarkPromises)
     .then(()=>{ success = true })
+    // If we end up in this catch it implies error in the script
+    .catch((e)=>{ console.error(e) })
     .then(()=>{
       browser.runtime.sendMessage({type:"update",success:(success && !failures.length),length:this.operations.progress.current,failures:failures.length?failures:null});
-      this.operations.running = "";
-      this.reset();
+      this.operations.running = null;
+      // reset() takes one "force" argument to fully reset status so we can recover from hard errors
+      // note - success will be true if bookmark couldn't be updated due to no matching id
+      this.reset(!success);
     })
   }
 
