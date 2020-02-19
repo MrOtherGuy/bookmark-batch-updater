@@ -73,8 +73,8 @@ let BMU = new (function(){
       case "regexp":
         this.operations.type = "regexp";
         
-        OPS.url.from = this.sRegexp(ARGS.fromDomain);
-        OPS.title.from = this.sRegexp(ARGS.fromTitle);
+        OPS.url.from = this.sRegexp(ARGS.fromDomain,rv);
+        OPS.title.from = this.sRegexp(ARGS.fromTitle,rv);
         
         OPS.url.to = STR(ARGS.toDomain);
         OPS.title.to = STR(ARGS.toTitle);
@@ -365,7 +365,7 @@ let BMU = new (function(){
     let bookmarkPromises = [new Promise((resolve)=>(setTimeout(()=>(resolve(1)),100)))];
     
     const CHANGES = {};
-    CHANGES.url = replacer.url[0] && replacer.url[1];
+    CHANGES.url = replacer.url[0] && (this.operations.type === "regexp" || replacer.url[1]);
     CHANGES.title = this.operations.type === "regexp" && replacer.title[0] && (typeof replacer.title[1] === "string") ;
     
     let failures = [];
