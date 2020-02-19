@@ -1,22 +1,22 @@
 {
   "description": "Utility to modify properties of multiple bookmarks at once",
-	"author": "MrOtherGuy",
+  "author": "MrOtherGuy",
   "manifest_version": 2,
   "name": "bookmark batch-updater",
   "permissions": ["bookmarks"],
-  "version": "0.7",
+  "version": "0.8",
   "browser_action": {
-      "default_title": "bookmark batch-updater",
-			"browser_style": true,
-      "default_popup": "popup.html"
+    "default_title": "bookmark batch-updater",
+    "browser_style": true,
+    "default_popup": "popup.html"
   },
   "background": {
-		"scripts": ["background-script.js"]
-	},
-	"applications": {
-  "gecko": {
-    "id": "bmbupdater@example.com",
-		"strict_min_version": "57.0"
+    "scripts": ["background-script.js"]
+  },
+  "applications": {
+    "gecko": {
+      "id": "bmbupdater@example.com",
+      "strict_min_version": "57.0"
+    }
   }
-}
 }

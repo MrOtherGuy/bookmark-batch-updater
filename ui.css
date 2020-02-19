@@ -1,0 +1,26 @@
+@media (prefers-color-scheme: dark) {
+    body{ background-color: #2A2A2E; color: #EEE }
+    input{ border: 1px solid currentColor; background-color: rgba(160,160,160,0.5); color: inherit }
+    input:hover{ background-color: rgba(180,180,180,0.6) }
+  }
+  button{ background-color: rgba(160,160,160,0.5); color: inherit }
+  button[disabled]{ opacity: 0.5 }
+  button:not([disabled]):hover{ border-color: #A0C0FF; background-color: rgba(167,167,200,0.5) }
+  
+  body{ min-height: 260px; --bmb-bookmark-count: ""; will-change: --bmb-bookmark-count; padding-inline: 4ch }
+  #domainText:not(:empty)::before{content:"matching"; padding-inline: 1ch}
+  body > h2:first-child{ padding: 0 8ch; margin-inline: auto; }
+  .bmCount::before{ content: var(--bmb-bookmark-count); padding-inline-start: 1ch }
+  .hidden{ opacity: 0; transform: rotateX(90deg); height: 0px }
+  #updateWarning{ transition: height 200ms ease-in, opacity 200ms ease-in; width: 80%; max-width: 90ch; margin-inline: auto; transform-origin: top }
+  .listItem > div{ max-width: 90ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+  .listItem{ margin: 0.1em 0 }
+  .odd{  background-color: rgba(120,120,120,0.2) }
+  .controls{ display: flex; flex-wrap: wrap; max-width: 80ch }
+  .controls input[type="text"]{ width:100%; flex-grow:0; margin-block: 0.2em }
+  #protocolRadio:checked~#domainReplace,
+  #regexpRadio:not(:checked)~#regexpControls,
+  #regexpRadio:checked~#domainFilter,
+  #regexpRadio:checked~#domainReplace{ display:none }
+  .controls > span{ margin-inline-end: 4ch; }
+  .spring{ flex-grow:1; min-width: 20ch }
