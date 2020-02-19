@@ -418,3 +418,15 @@ let BMU = new (function(){
 
 })();
 
+async function switchToOrOpenTab(){
+  let views = await browser.extension.getViews({type:"tab"})
+  if(!views.length){
+    browser.tabs.create({url:"ui.html"})
+  }else{
+    let aTab = await views[0].browser.tabs.getCurrent()
+    browser.tabs.update(aTab.id,{active:true})
+  }
+}
+
+browser.browserAction.onClicked.addListener(switchToOrOpenTab)
+

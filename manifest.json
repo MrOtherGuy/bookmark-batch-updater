@@ -7,8 +7,7 @@
   "version": "0.8",
   "browser_action": {
     "default_title": "bookmark batch-updater",
-    "browser_style": true,
-    "default_popup": "popup.html"
+    "browser_style": true
   },
   "background": {
     "scripts": ["background-script.js"]
