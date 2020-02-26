@@ -10,19 +10,7 @@
 </head>
 <body>
   <h2>Bookmark Batch-Updater</h2>
-  <div class="buttonContainer">
-    <button id="scanButton">Scan bookmarks</button>
-    <button id="almostUpdateButton" disabled="true">Update bookmarks</button>
-  </div>
-  <div id="updateWarning" class="hidden">
-    <p>Attention!</p>
-    <p>This operation replaces <span class="bmCount"></span> bookmark(s) and cannot be undone.</p>
-    <p>You may want to consider backing up your bookmarks before starting the update. To do so, open the bookmark manager (Ctrl/Command + Shift + B). Use the Import and Backup button from the top toolbar.</p>
-    <button id="updateButton" tabindex="-1">Update already!</button>
-  </div>
-  <p id="statusbar"><span id="messageBox"></span><span id="progressBox"></span></p>
   <div class="controls">
-  <span>Select scan type:</span>
   <input type="radio" id="protocolRadio" class="radio" name="scanType" value="protocol" checked></input>
   <label for="protocolRadio">http:-to-https:</label>
   <input type="radio" id="domainRadio" class="radio" name="scanType" value="domain"></input>
@@ -30,6 +18,7 @@
   <input type="radio" id="regexpRadio" class="radio" name="scanType" value="regexp"></input>
   <label for="regexpRadio">RegExp</label>
   <div class="spring"></div>
+  <div class="textcontrols">
   <input id="domainFilter" type="text" placeholder="Domain name to search for - i.e. 'imgur.com'"></input>
   <input id="domainReplace" type="text" placeholder="Domain name to replace results with - i.e. 'imgur.com'"></input>
   <div id="regexpControls">
@@ -42,6 +31,19 @@
   <input id="regexpTitleReplace" type="text" placeholder="String to replace title match with"></input>
   </div>
   </div>
+  <div class="buttonContainer">
+    <button id="scanButton">Scan bookmarks</button>
+    <button id="almostUpdateButton" disabled="true">Update bookmarks</button>
+    <div id="statusbar"><span id="messageBox"></span><span id="progressBox"></span></div>
+  </div>
+  <div id="updateWarning" class="hidden">
+    <p>Attention!</p>
+    <p>This operation replaces <span class="bmCount"></span> bookmark(s) and cannot be undone.</p>
+    <p>You may want to consider backing up your bookmarks before starting the update. To do so, open the bookmark manager (Ctrl/Command + Shift + B). Use the Import and Backup button from the top toolbar.</p>
+    <button id="updateButton" tabindex="-1">Update already!</button>
+  </div>
+  </div>
+  
   <p><span id="nBookmarks"></span><span id="domainText"></span><span class="bmCount"></span></p>
   <p id="bmList"></p>
 </body>

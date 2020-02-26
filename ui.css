@@ -1,19 +1,40 @@
+
+body{ 
+  min-height: 260px;
+  --bmb-bookmark-count: "";
+  will-change: --bmb-bookmark-count;
+  padding-inline: 4ch;
+  display: flex;
+  flex-direction: column;
+  background-color: rgb(246, 246, 239);
+  align-items: center;
+}
+
+.controls{ padding: 1ch 2ch; }
+.radio+label{ padding: 1ch; cursor: pointer }
+
+.radio:checked+label{ background-color: rgba(100,100,100,0.4) }
+.radio+label:hover{ background-color: rgba(80,80,80,0.5) }
+.radio{ display: none; }
+
 @media (prefers-color-scheme: dark) {
   body{ background-color: #2A2A2E; color: #EEE }
   input{ border: 1px solid currentColor; background-color: rgba(160,160,160,0.5); color: inherit }
   input:hover{ background-color: rgba(180,180,180,0.6) }
 }
 
-body{ 
-  min-height: 260px;
-  --bmb-bookmark-count: "";
-  will-change: --bmb-bookmark-count;
-  padding-inline: 4ch
+button{ 
+  background-color: rgb(70,80,250);
+  height: 34px;
+  color: inherit;
+  border-radius: 4px;
+  border: 1px solid;
+  margin: 1ch;
+  opacity: 0.8;
 }
 
-button{ background-color: rgba(160,160,160,0.5); color: inherit }
-button[disabled]{ opacity: 0.5 }
-button:not([disabled]):hover{ border-color: #A0C0FF; background-color: rgba(167,167,200,0.5) }
+button[disabled]{ opacity: 0.5; background-color: rgba(100,100,100,0.4) }
+button:not([disabled]):hover{ opacity: 1; box-shadow: inset 0 0 6px 0px black; border-color: green  }
 
 .spring{ flex-grow:1; min-width: 20ch }
 .hidden{ opacity: 0; transform: rotateX(90deg); height: 0px }
@@ -25,11 +46,12 @@ body > h2:first-child{ padding: 0 8ch; margin-inline: auto; }
 
 #updateWarning{
   transition: height 200ms ease-in, opacity 200ms ease-in;
-  width: 80%;
-  max-width: 90ch;
-  margin-inline: auto;
+  background-color: rgb(100,50,50);
+  padding-inline: 1ch;
   transform-origin: top
 }
+
+#statusbar{ display: flex; align-items: center }
 
 .listItem > div{
   max-width: 90ch;
@@ -41,11 +63,22 @@ body > h2:first-child{ padding: 0 8ch; margin-inline: auto; }
 .odd{  background-color: rgba(120,120,120,0.2) }
 
 .controls > span{ margin-inline-end: 4ch; }
-.controls{ display: flex; flex-wrap: wrap; max-width: 80ch }
-.controls input[type="text"]{ width:100%; flex-grow:0; margin-block: 0.2em }
 
-#protocolRadio:checked~#domainReplace,
-#regexpRadio:not(:checked)~#regexpControls,
-#regexpRadio:checked~#domainFilter,
-#regexpRadio:checked~#domainReplace{ display:none }
+.textcontrols,
+.controls{
+  display: flex;
+  flex-wrap: wrap;
+  max-width: 80ch
+}
+
+.buttonContainer,
+.textcontrols{ width:100%; background-color: rgba(100,100,100,0.4); padding: 1ch }
+.textcontrols input{ width: 100%; margin-block: 0.3em }
+
+.buttonContainer{ display: flex; }
+
+#protocolRadio:checked ~ .textcontrols > #domainReplace,
+#regexpRadio:not(:checked) ~ .textcontrols > #regexpControls,
+#regexpRadio:checked  ~ .textcontrols >  #domainFilter,
+#regexpRadio:checked  ~ .textcontrols > #domainReplace{ display:none }
 
