@@ -12,7 +12,7 @@
   <h2>Bookmark Batch-Updater</h2>
   <div class="controls">
   <input type="radio" id="protocolRadio" class="radio" name="scanType" value="protocol" checked></input>
-  <label for="protocolRadio">http:-to-https:</label>
+  <label for="protocolRadio">http-to-https</label>
   <input type="radio" id="domainRadio" class="radio" name="scanType" value="domain"></input>
   <label for="domainRadio">replace domain</label>
   <input type="radio" id="regexpRadio" class="radio" name="scanType" value="regexp"></input>
@@ -22,7 +22,13 @@
   <input id="domainFilter" type="text" placeholder="Domain name to search for - i.e. 'imgur.com'"></input>
   <input id="domainReplace" type="text" placeholder="Domain name to replace results with - i.e. 'imgur.com'"></input>
   <div id="regexpControls">
-  <p>RegExp search can be used to search bookmark url or title. If operands for both url and title are defined then the update function will update both url and title.</p>
+  <details>
+    <summary>RegExp help...</summary>
+    <p>RegExp search can be used to search bookmark url or title. If operands for both url and title are defined then the update function will update both url and title.</p>
+    <p>RegExp mode internally uses <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace">String.search(regexp,string)</a> thus the <em>replacement</em> string can use all the special replacement patterns that the browser supports.</p>
+    <p>For example if you use the regexp <code>(\/\/developer\..*\/)en-US\/</code> with replacement <code>$1de-DE/</code> then it would replace the <code>en-US</code> bit with <code>de-DE</code> in "https://developer.mozilla.org/en-US/docs/Web/" and "https://developer.example.com/en-US/test/" but not in "https://addons.mozilla.org/en-US/firefox/"</p>
+  </details>
+  
   <span>Search bookmark URL</span>
   <input id="regexpURLFilter" type="text" placeholder="RegExp to search url"></input>
   <input id="regexpURLReplace" type="text" placeholder="String to replace url match with"></input>
