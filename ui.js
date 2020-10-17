@@ -50,10 +50,19 @@ function messageHandler(request,sender,sendResponse){
 function createListItem(bm){
   let container = document.createElement("div");
   container.classList.add("listItem");
-
+  if(bm.hasOwnProperty("note")){
+    container.appendChild(document.createElement("div")).textContent = bm.note;
+    return container
+  }
   for(let prop in bm){
     let t = document.createElement("div");
-    t.textContent = bm[prop];
+    t.appendChild(document.createElement("code")).textContent = "--";
+    t.append(bm[prop].match);
+    if(bm[prop].hasOwnProperty("replacement")){
+      t.appendChild(document.createElement("br"));
+      t.appendChild(document.createElement("code")).textContent = "++";
+      t.append(bm[prop].replacement);
+    }
     container.appendChild(t)
   }
   return container

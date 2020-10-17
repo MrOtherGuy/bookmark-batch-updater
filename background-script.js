@@ -194,20 +194,18 @@ let BMU = new (function(){
   
   this.createBookmarkList = async function(){
     
-    const BM = function(bm,r,extra){
+    const BM = function(bm,r,includeReplacement){
       const o = {};
       if(r.url[0] && typeof r.url[1] === "string"){
-        if(extra){
-          o.url = `${bm.url} => ${bm.url.replace(r.url[0],r.url[1])}`;
-        }else{
-          o.url = bm.url;
+        o.url = { "match": bm.url };
+        if(includeReplacement){
+          o.url.replacement = bm.url.replace(r.url[0],r.url[1]);
         }
       }
       if(r.title[0] && typeof r.title[1] === "string"){
-        if(extra){
-          o.title = `${bm.title} => ${bm.title.replace(r.title[0],r.title[1])}`;
-        }else{
-          o.title = bm.title;
+        o.title = { "match": bm.title };
+        if(includeReplacement){
+          o.title.replacement = bm.title.replace(r.title[0],r.title[1]);
         }
       }
       return o
@@ -227,7 +225,7 @@ let BMU = new (function(){
     END && list.push(BM(bookmarks[0],REPLACER,true));
     let idx = 1;
     while(idx < END){
-      list.push(BM(bookmarks[idx],REPLACER))
+      list.push(BM(bookmarks[idx],REPLACER,true))
       idx++
     }
     if (bookmarks.length > END){

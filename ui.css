@@ -18,20 +18,24 @@ body{
 .radio{ display: none; }
 
 @media (prefers-color-scheme: dark) {
-  body{ background-color: #2A2A2E; color: #EEE }
+  body{ background-color: #2A2A2E; color: #DDD }
   input{ border: 1px solid currentColor; background-color: rgba(160,160,160,0.5); color: inherit }
+  a{ color: rgb(230,160,100) }
+  a:visited{ color: rgb(180,130,190) }
   input:hover{ background-color: rgba(180,180,180,0.6) }
 }
 
 button{ 
   background-color: rgb(70,80,250);
   height: 34px;
-  color: inherit;
+  color: #EEE;
   border-radius: 4px;
   border: 1px solid;
   margin: 1ch;
   opacity: 0.8;
 }
+
+details{ margin-bottom: 1em }
 
 button[disabled]{ opacity: 0.5; background-color: rgba(100,100,100,0.4) }
 button:not([disabled]):hover{ opacity: 1; box-shadow: inset 0 0 6px 0px black; border-color: green  }
@@ -57,10 +61,21 @@ body > h2:first-child{ padding: 0 8ch; margin-inline: auto; }
   max-width: 90ch;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap
+  white-space: nowrap;
+  padding-block: 0.3em;
 }
 .listItem{ margin: 0.1em 0 }
 .odd{  background-color: rgba(120,120,120,0.2) }
+
+code{
+  padding-inline: 0.5ch;
+  border: 1px solid grey;
+  box-shadow: inset 0 0 0.3ch;
+  margin-inline-end: 1ch;
+  border-radius: 0.5ch;
+}
+div > code{ background: rgba(255,100,100,0.2) }
+br+code{ background: rgba(100,255,100,0.3) }
 
 .controls > span{ margin-inline-end: 4ch; }
 
