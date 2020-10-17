@@ -4,7 +4,7 @@
   "manifest_version": 2,
   "name": "bookmark batch-updater",
   "permissions": ["bookmarks"],
-  "version": "0.8",
+  "version": "0.9",
   "browser_action": {
     "default_title": "bookmark batch-updater",
     "browser_style": true
