@@ -173,7 +173,7 @@ let BMU = new (function(){
       case "update":
         this.print("received update request");
         sendResponse(result);
-        result.ok && this.update();
+        result.ok && this.update(request.excludes);
         break;
       case "list":
         this.print("received scanned list request");
@@ -195,7 +195,7 @@ let BMU = new (function(){
   this.createBookmarkList = async function(){
     
     const BM = function(bm,r,includeReplacement){
-      const o = {};
+      const o = { id: bm.id };
       if(r.url[0] && typeof r.url[1] === "string"){
         o.url = { "match": bm.url };
         if(includeReplacement){
@@ -218,7 +218,7 @@ let BMU = new (function(){
     let bookmarks = this.scannedBookmarks;
     
     let list = [];
-    const END = Math.min(100,bookmarks.length);
+    const END = bookmarks.length;
     
     const REPLACER = this.getReplacers();
     
@@ -232,7 +232,7 @@ let BMU = new (function(){
       list.push({note:`--- and ${bookmarks.length - END} more ---`});
     }
     this.operations.running = null;
-    browser.runtime.sendMessage({type:"list",list:list});
+    browser.runtime.sendMessage({type:"list",operation:this.operations.type,list:list});
   };
   
   this.parseDomain = function(url){
@@ -247,7 +247,11 @@ let BMU = new (function(){
   
   this.isBookmarkATarget = function(node,ref){
     let rv = false;
-    let queries = {url:this.operations.operands.url.from,title:this.operations.operands.title.from}; // This has been set earlier by this.isOpValid()
+    let queries = {
+      url: this.operations.operands.url.from,
+      title: this.operations.operands.title.from
+    }; // This has been set earlier by this.isOpValid()
+    
     switch(ref.options.type){
       case "protocol":
         return (/^http:/).test(node.url) && (queries.url === null || this.parseDomain(node.url).endsWith(queries.url))
@@ -299,7 +303,12 @@ let BMU = new (function(){
     )
     .finally(()=>{
       this.operations.running = null;
-      browser.runtime.sendMessage({type:"scan",success:!(this.scannedBookmarks===null),length:this.scannedBookmarks?this.scannedBookmarks.length:0,domain:options.fromDomain});
+      browser.runtime.sendMessage({
+        type: "scan",
+        success: !(this.scannedBookmarks===null),
+        length: this.scannedBookmarks?this.scannedBookmarks.length:0,
+        domain: options.fromDomain
+        });
     })
   }
   
@@ -349,7 +358,7 @@ let BMU = new (function(){
     return rv
   }
   
-  this.update = async function(){
+  this.update = async function(excludes){
     
     if(this.scannedBookmarks === null){
       return
@@ -365,11 +374,15 @@ let BMU = new (function(){
     const CHANGES = {};
     CHANGES.url = replacer.url[0] && (this.operations.type === "regexp" || replacer.url[1]);
     CHANGES.title = this.operations.type === "regexp" && replacer.title[0] && (typeof replacer.title[1] === "string") ;
-    
+    let exclusions = 0;
     let failures = [];
     let success = false;
     for(let bm of this.scannedBookmarks){
-      
+      if(excludes.includes(bm.id)){
+        this.operations.progress.current++;
+        exclusions++;
+        continue
+      }
       let newProps = {};
       let failedURL;
       if(CHANGES.url){
@@ -404,7 +417,12 @@ let BMU = new (function(){
     // If we end up in this catch it implies error in the script
     .catch((e)=>{ console.error(e) })
     .then(()=>{
-      browser.runtime.sendMessage({type:"update",success:(success && !failures.length),length:this.operations.progress.current,failures:failures.length?failures:null});
+      browser.runtime.sendMessage({
+        type:"update",
+        success:(success && !failures.length),
+        length:this.operations.progress.current - exclusions,
+        failures:failures.length?failures:null
+      });
       this.operations.running = null;
       // reset() takes one "force" argument to fully reset status so we can recover from hard errors
       // note - success will be true if bookmark couldn't be updated due to no matching id

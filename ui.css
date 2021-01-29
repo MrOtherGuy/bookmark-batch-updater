@@ -50,7 +50,7 @@ body > h2:first-child{ padding: 0 8ch; margin-inline: auto; }
 
 #updateWarning{
   transition: height 200ms ease-in, opacity 200ms ease-in;
-  background-color: rgb(100,50,50);
+  background-color: rgb(180,70,60);
   padding-inline: 1ch;
   transform-origin: top
 }
@@ -64,8 +64,14 @@ body > h2:first-child{ padding: 0 8ch; margin-inline: auto; }
   white-space: nowrap;
   padding-block: 0.3em;
 }
-.listItem{ margin: 0.1em 0 }
+.listItem{ margin: 0.1em 0; display: flex; }
 .odd{  background-color: rgba(120,120,120,0.2) }
+
+.listItem > input{ margin-inline: 1ch }
+.listItem > input:not(:checked) + div{
+  opacity: 0.7;
+  background-color: rgb(170,60,60)
+}
 
 code{
   padding-inline: 0.5ch;
