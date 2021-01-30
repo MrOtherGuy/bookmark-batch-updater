@@ -87,9 +87,17 @@ function createListItem(bm,isChecked){
 function listBookmarks(request){
   excludeList.clear();
   const isProtocol = request.operation === "protocol";
+  
   function shouldBMBeChecked(bm){
-    return !isProtocol || LOCAL_URL_PREFIXES.every(url=>!bm.url.match.startsWith(`http://${url}`))
+    switch(request.operation){
+      case "protocol":
+        return LOCAL_URL_PREFIXES.every(url=>!bm.url.match.startsWith(`http://${url}`))
+      case "regexp":
+        return !bm.url.match.startsWith("javascript:");
+    }
+    return true
   }
+  
   let listParent = DQ("#bmList");
   let odd = true;
   while(listParent.children.length > 0){
