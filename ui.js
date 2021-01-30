@@ -89,11 +89,14 @@ function listBookmarks(request){
   const isProtocol = request.operation === "protocol";
   
   function shouldBMBeChecked(bm){
+    if(!bm.url){
+      return true
+    }
     switch(request.operation){
       case "protocol":
         return LOCAL_URL_PREFIXES.every(url=>!bm.url.match.startsWith(`http://${url}`))
       case "regexp":
-        return !bm.url.match.startsWith("javascript:");
+        return !bm.url.match.startsWith("javascript:") && !bm.url.startsWith("data:") ;
     }
     return true
   }
