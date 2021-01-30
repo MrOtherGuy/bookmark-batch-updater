@@ -1,6 +1,6 @@
 'use strict';
 
-let BMU = new (function(){
+const BMU = function(){
 
   this.scannedBookmarks = null;
   
@@ -27,7 +27,7 @@ let BMU = new (function(){
       title: new this.State(),
       clear: function(){this.url.clear() && this.title.clear()}
     }
-  }
+  };
   
   this.debug = true;
   
@@ -173,7 +173,7 @@ let BMU = new (function(){
       case "update":
         this.print("received update request");
         sendResponse(result);
-        result.ok && this.update();
+        result.ok && this.update(request.excludes,request.allowUrlFixup);
         break;
       case "list":
         this.print("received scanned list request");
@@ -195,7 +195,7 @@ let BMU = new (function(){
   this.createBookmarkList = async function(){
     
     const BM = function(bm,r,includeReplacement){
-      const o = {};
+      const o = { id: bm.id };
       if(r.url[0] && typeof r.url[1] === "string"){
         o.url = { "match": bm.url };
         if(includeReplacement){
@@ -218,7 +218,7 @@ let BMU = new (function(){
     let bookmarks = this.scannedBookmarks;
     
     let list = [];
-    const END = Math.min(100,bookmarks.length);
+    const END = bookmarks.length;
     
     const REPLACER = this.getReplacers();
     
@@ -232,7 +232,11 @@ let BMU = new (function(){
       list.push({note:`--- and ${bookmarks.length - END} more ---`});
     }
     this.operations.running = null;
-    browser.runtime.sendMessage({type:"list",list:list});
+    browser.runtime.sendMessage({
+      type:"list",
+      operation:this.operations.type,
+      list:list
+    });
   };
   
   this.parseDomain = function(url){
@@ -247,7 +251,11 @@ let BMU = new (function(){
   
   this.isBookmarkATarget = function(node,ref){
     let rv = false;
-    let queries = {url:this.operations.operands.url.from,title:this.operations.operands.title.from}; // This has been set earlier by this.isOpValid()
+    let queries = {
+      url: this.operations.operands.url.from,
+      title: this.operations.operands.title.from
+    }; // This has been set earlier by this.isOpValid()
+    
     switch(ref.options.type){
       case "protocol":
         return (/^http:/).test(node.url) && (queries.url === null || this.parseDomain(node.url).endsWith(queries.url))
@@ -299,7 +307,12 @@ let BMU = new (function(){
     )
     .finally(()=>{
       this.operations.running = null;
-      browser.runtime.sendMessage({type:"scan",success:!(this.scannedBookmarks===null),length:this.scannedBookmarks?this.scannedBookmarks.length:0,domain:options.fromDomain});
+      browser.runtime.sendMessage({
+        type: "scan",
+        success: !(this.scannedBookmarks===null),
+        length: this.scannedBookmarks?this.scannedBookmarks.length:0,
+        domain: options.fromDomain
+        });
     })
   }
   
@@ -316,10 +329,19 @@ let BMU = new (function(){
     }
   }
   
+  
   this.isValidURL = function(url,hasNoBackslash){
     let rv = true;
+    
+    function tryMakeUrl(base){
+      try{
+        return new URL(base)
+      }catch(e){
+        return null
+      }
+    }
     try{
-      let d = new URL(url);
+      let d = tryMakeUrl(url) || tryMakeUrl(decodeURIComponent(url));
       rv =   !d.host.startsWith(".")
           && !d.host.endsWith(".")
           && d.host.indexOf("..") === -1
@@ -348,8 +370,15 @@ let BMU = new (function(){
     }
     return rv
   }
-  
-  this.update = async function(){
+  this.reformatUrl = function(url,index){
+    try{
+      return decodeURIComponent(url.slice(0,index)) + url.slice(index)
+    }catch(e){
+      // this will intentionally cause bookmarks.update() to fail
+      return null
+    }
+  }
+  this.update = async function(excludes,allowfixup){
     
     if(this.scannedBookmarks === null){
       return
@@ -365,11 +394,15 @@ let BMU = new (function(){
     const CHANGES = {};
     CHANGES.url = replacer.url[0] && (this.operations.type === "regexp" || replacer.url[1]);
     CHANGES.title = this.operations.type === "regexp" && replacer.title[0] && (typeof replacer.title[1] === "string") ;
-    
+    let exclusions = 0;
     let failures = [];
     let success = false;
     for(let bm of this.scannedBookmarks){
-      
+      if(excludes.includes(bm.id)){
+        this.operations.progress.current++;
+        exclusions++;
+        continue
+      }
       let newProps = {};
       let failedURL;
       if(CHANGES.url){
@@ -385,11 +418,25 @@ let BMU = new (function(){
 
       if(newProps.url || newProps.title){
         const ID = bm.id;
+        // This path should handle an outcome where the resulting url is in
+        // in encoded form and thus invalid. If such a scenario were to happen
+        // then it's very likely that the url does not have a ":" in it
+        // so use that as a simple detecting mechanism. Moreso, should
+        // such a scenario occur, then it is likely that the correct url
+        // was part of a query parameter
+        if(allowfixup && newProps.url.indexOf(":") === -1){
+          let queryIndex = newProps.url.indexOf("?");
+          if(queryIndex > -1){
+            newProps.url = this.reformatUrl(newProps.url,queryIndex);
+          }else{
+            newProps.url = this.reformatUrl(newProps.url,newProps.url.length);
+          }
+        }
         let updating = browser.bookmarks.update(ID,newProps);
 
         // This error should only happen if the bookmark to be updated is no longer available when the update is being run but it was available when scanning
         updating
-        .catch((e)=>(failures.push({error:`invalid id: ${ID}`}),true))
+        .catch((e)=>(failures.push({error:e.message}),true))
         .finally(()=>(this.operations.progress.current++));
         
         bookmarkPromises.push(updating);
@@ -399,12 +446,17 @@ let BMU = new (function(){
         this.operations.progress.current++
       }
     }
-    Promise.all(bookmarkPromises)
+    Promise.allSettled(bookmarkPromises)
     .then(()=>{ success = true })
     // If we end up in this catch it implies error in the script
     .catch((e)=>{ console.error(e) })
     .then(()=>{
-      browser.runtime.sendMessage({type:"update",success:(success && !failures.length),length:this.operations.progress.current,failures:failures.length?failures:null});
+      browser.runtime.sendMessage({
+        type: "update",
+        success: (success && !failures.length),
+        length: this.operations.progress.current - exclusions,
+        failures: failures.length?failures:null
+      });
       this.operations.running = null;
       // reset() takes one "force" argument to fully reset status so we can recover from hard errors
       // note - success will be true if bookmark couldn't be updated due to no matching id
@@ -414,11 +466,16 @@ let BMU = new (function(){
 
   browser.runtime.onMessage.addListener(this.messageHandler.bind(this));
 
-})();
+};
+
+let engine = null; 
 
 async function switchToOrOpenTab(){
-  let views = await browser.extension.getViews({type:"tab"})
+  let views = await browser.extension.getViews({type:"tab"});
   if(!views.length){
+    if(!engine){
+      engine = new BMU();
+    }
     browser.tabs.create({url:"ui.html"})
   }else{
     let aTab = await views[0].browser.tabs.getCurrent()
