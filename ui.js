@@ -38,7 +38,7 @@ function messageHandler(request,sender,sendResponse){
       }else{
         let fails = request.failures ? request.failures.length : 0;
         setStatus(`Update finished with ${request.length - fails} success and ${request.failures.length} failures`," ","Failed operations");
-        listBookmarks({list:request.failures});
+        listFailures({list:request.failures});
       }
       button.setAttribute("disabled","true");
       DQ("#scanButton").removeAttribute("disabled");
@@ -64,7 +64,7 @@ function createListItem(bm,isChecked){
   let container = document.createElement("div");
   container.classList.add("listItem");
   if(bm.hasOwnProperty("error")){
-    container.appendChild(document.createElement("div")).textContent = bm.note;
+    container.appendChild(document.createElement("div")).textContent = bm.error;
     return container
   }
   container.appendChild(createCheckbox(bm));
@@ -84,9 +84,24 @@ function createListItem(bm,isChecked){
   return container
 }
 
+
+
+function listFailures(request){
+  let listParent = DQ("#bmList");
+  let odd = true;
+  while(listParent.children.length > 0){
+    listParent.removeChild(listParent.children[0]);
+  }
+  for(let fail of request.list){
+    let item = listParent.appendChild(createListItem(fail,false));
+    odd && item.classList.add("odd");
+    odd = !odd;
+  }
+  document.body.setAttribute("style",`--bmb-bookmark-count:'${request.list.length}'`);
+}
+
 function listBookmarks(request){
   excludeList.clear();
-  const isProtocol = request.operation === "protocol";
   
   function shouldBMBeChecked(bm){
     if(!bm.url){

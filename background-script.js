@@ -329,11 +329,19 @@ const BMU = function(){
     }
   }
   
+  
   this.isValidURL = function(url,hasNoBackslash){
     let rv = true;
     
+    function tryMakeUrl(base){
+      try{
+        return new URL(base)
+      }catch(e){
+        return null
+      }
+    }
     try{
-      let d = new URL(decodeURIComponent(url));
+      let d = tryMakeUrl(url) || tryMakeUrl(decodeURIComponent(url));
       rv =   !d.host.startsWith(".")
           && !d.host.endsWith(".")
           && d.host.indexOf("..") === -1
@@ -428,7 +436,7 @@ const BMU = function(){
 
         // This error should only happen if the bookmark to be updated is no longer available when the update is being run but it was available when scanning
         updating
-        .catch((e)=>(failures.push({error:`invalid id: ${ID}`}),true))
+        .catch((e)=>(failures.push({error:e.message}),true))
         .finally(()=>(this.operations.progress.current++));
         
         bookmarkPromises.push(updating);
@@ -438,7 +446,7 @@ const BMU = function(){
         this.operations.progress.current++
       }
     }
-    Promise.all(bookmarkPromises)
+    Promise.allSettled(bookmarkPromises)
     .then(()=>{ success = true })
     // If we end up in this catch it implies error in the script
     .catch((e)=>{ console.error(e) })
