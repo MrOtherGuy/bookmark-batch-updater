@@ -3,6 +3,11 @@
 let INTERVAL = null;
 let currentScanLength = 0;
 const excludeList = new Map();
+const LOCAL_URL_PREFIXES = ["192.168.","127.0.","10.0.0.","10.10.1.","10.1"];
+const SUPPORTED_PROPERTIES = ["url","title"];
+const DQ = document.querySelector.bind(document);
+
+
 
 function messageHandler(request,sender,sendResponse){
   if(sender.id != browser.runtime.id || sender.envType != "addon_child"){
@@ -64,23 +69,20 @@ function createListItem(bm,isChecked){
   }
   container.appendChild(createCheckbox(bm));
   for(let prop in bm){
-    if(prop === "id"){
-      continue
+    if(SUPPORTED_PROPERTIES.includes(prop)){
+      let t = document.createElement("div");
+      t.appendChild(document.createElement("code")).textContent = "--";
+      t.append(bm[prop].match);
+      if(bm[prop].hasOwnProperty("replacement")){
+        t.appendChild(document.createElement("br"));
+        t.appendChild(document.createElement("code")).textContent = "++";
+        t.append(bm[prop].replacement);
+      }
+      container.appendChild(t)
     }
-    let t = document.createElement("div");
-    t.appendChild(document.createElement("code")).textContent = "--";
-    t.append(bm[prop].match);
-    if(bm[prop].hasOwnProperty("replacement")){
-      t.appendChild(document.createElement("br"));
-      t.appendChild(document.createElement("code")).textContent = "++";
-      t.append(bm[prop].replacement);
-    }
-    container.appendChild(t)
   }
   return container
 }
-
-const LOCAL_URL_PREFIXES = ["192.168.","127.0.","10.0.0.","10.10.1.","10.1"];
 
 function listBookmarks(request){
   excludeList.clear();
@@ -104,10 +106,6 @@ function listBookmarks(request){
     odd = !odd;
   }
   document.body.setAttribute("style",`--bmb-bookmark-count:'${request.list.length - excludeList.size}'`);
-}
-
-function DQ(str){
-  return document.querySelector(str)
 }
 
 function setStatus(message,progress,listContext){
@@ -233,15 +231,22 @@ document.onreadystatechange = function () {
     DQ("#updateButton").addEventListener("click",requestUpdate);
     DQ("#almostUpdateButton").addEventListener("click",showUpdateButton);
     DQ("#bmList").addEventListener("change",onCheckboxToggle);
-    document.querySelectorAll(".radio").forEach((r)=>{
-      r.addEventListener("change",()=>(r.checked&&DQ("#almostUpdateButton").setAttribute("disabled","true")))
-      
-    })
+    document.querySelectorAll(".radio").forEach(
+      (r) => {
+        r.addEventListener("change",
+          () => (r.checked&&DQ("#almostUpdateButton").setAttribute("disabled","true")))
+      }
+    );
     
     browser.runtime.onMessage.addListener(messageHandler);
     // Ask status from background
     browser.runtime.sendMessage({operation:"status"})
-    .then((state)=>{if(state.busy){initView(state);INTERVAL=setInterval(statusCheck,300)}})
+    .then( (state) => {
+      if(state.busy){
+        initView(state);
+        INTERVAL = setInterval(statusCheck,300)
+      }
+    });
       
     window.addEventListener("unload",function(e){
       browser.runtime.sendMessage({operation:"reset"})

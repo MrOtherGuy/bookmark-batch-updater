@@ -1,6 +1,6 @@
 'use strict';
 
-let BMU = new (function(){
+const BMU = function(){
 
   this.scannedBookmarks = null;
   
@@ -27,7 +27,7 @@ let BMU = new (function(){
       title: new this.State(),
       clear: function(){this.url.clear() && this.title.clear()}
     }
-  }
+  };
   
   this.debug = true;
   
@@ -232,7 +232,11 @@ let BMU = new (function(){
       list.push({note:`--- and ${bookmarks.length - END} more ---`});
     }
     this.operations.running = null;
-    browser.runtime.sendMessage({type:"list",operation:this.operations.type,list:list});
+    browser.runtime.sendMessage({
+      type:"list",
+      operation:this.operations.type,
+      list:list
+    });
   };
   
   this.parseDomain = function(url){
@@ -418,10 +422,10 @@ let BMU = new (function(){
     .catch((e)=>{ console.error(e) })
     .then(()=>{
       browser.runtime.sendMessage({
-        type:"update",
-        success:(success && !failures.length),
-        length:this.operations.progress.current - exclusions,
-        failures:failures.length?failures:null
+        type: "update",
+        success: (success && !failures.length),
+        length: this.operations.progress.current - exclusions,
+        failures: failures.length?failures:null
       });
       this.operations.running = null;
       // reset() takes one "force" argument to fully reset status so we can recover from hard errors
@@ -432,11 +436,16 @@ let BMU = new (function(){
 
   browser.runtime.onMessage.addListener(this.messageHandler.bind(this));
 
-})();
+};
+
+let engine = null; 
 
 async function switchToOrOpenTab(){
-  let views = await browser.extension.getViews({type:"tab"})
+  let views = await browser.extension.getViews({type:"tab"});
   if(!views.length){
+    if(!engine){
+      engine = new BMU();
+    }
     browser.tabs.create({url:"ui.html"})
   }else{
     let aTab = await views[0].browser.tabs.getCurrent()
