@@ -64,7 +64,11 @@ body > h2:first-child{ padding: 0 8ch; margin-inline: auto; }
   white-space: nowrap;
   padding-block: 0.3em;
 }
-.listItem{ margin: 0.1em 0; display: flex; }
+.combo,
+.listItem{ margin: 0.1em 0; display: flex }
+
+
+
 .odd{  background-color: rgba(120,120,120,0.2) }
 
 .listItem > input{ margin-inline: 1ch }
@@ -95,6 +99,8 @@ br+code{ background: rgba(100,255,100,0.3) }
 .buttonContainer,
 .textcontrols{ width:100%; background-color: rgba(100,100,100,0.4); padding: 1ch }
 .textcontrols input{ width: 100%; margin-block: 0.3em }
+
+.combo > input{ width: unset; margin-inline: 1ch }
 
 .buttonContainer{ display: flex; }
 

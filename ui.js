@@ -96,7 +96,7 @@ function listBookmarks(request){
       case "protocol":
         return LOCAL_URL_PREFIXES.every(url=>!bm.url.match.startsWith(`http://${url}`))
       case "regexp":
-        return !bm.url.match.startsWith("javascript:") && !bm.url.startsWith("data:") ;
+        return !bm.url.match.startsWith("javascript:") && !bm.url.match.startsWith("data:") ;
     }
     return true
   }
@@ -215,7 +215,11 @@ function onCheckboxToggle(ev){
 
 
 function requestUpdate(e){
-  browser.runtime.sendMessage({operation:"update",excludes:Array.from(excludeList.keys())})
+  browser.runtime.sendMessage({
+    operation:"update",
+    excludes:Array.from(excludeList.keys()),
+    allowUrlFixup:DQ("#fixupCheckbox").checked
+  })
   .then(
     (response)=>{
       if(response.ok){

@@ -173,7 +173,7 @@ const BMU = function(){
       case "update":
         this.print("received update request");
         sendResponse(result);
-        result.ok && this.update(request.excludes);
+        result.ok && this.update(request.excludes,request.allowUrlFixup);
         break;
       case "list":
         this.print("received scanned list request");
@@ -331,8 +331,9 @@ const BMU = function(){
   
   this.isValidURL = function(url,hasNoBackslash){
     let rv = true;
+    
     try{
-      let d = new URL(url);
+      let d = new URL(decodeURIComponent(url));
       rv =   !d.host.startsWith(".")
           && !d.host.endsWith(".")
           && d.host.indexOf("..") === -1
@@ -361,8 +362,15 @@ const BMU = function(){
     }
     return rv
   }
-  
-  this.update = async function(excludes){
+  this.reformatUrl = function(url,index){
+    try{
+      return decodeURIComponent(url.slice(0,index)) + url.slice(index)
+    }catch(e){
+      // this will intentionally cause bookmarks.update() to fail
+      return null
+    }
+  }
+  this.update = async function(excludes,allowfixup){
     
     if(this.scannedBookmarks === null){
       return
@@ -402,6 +410,20 @@ const BMU = function(){
 
       if(newProps.url || newProps.title){
         const ID = bm.id;
+        // This path should handle an outcome where the resulting url is in
+        // in encoded form and thus invalid. If such a scenario were to happen
+        // then it's very likely that the url does not have a ":" in it
+        // so use that as a simple detecting mechanism. Moreso, should
+        // such a scenario occur, then it is likely that the correct url
+        // was part of a query parameter
+        if(allowfixup && newProps.url.indexOf(":") === -1){
+          let queryIndex = newProps.url.indexOf("?");
+          if(queryIndex > -1){
+            newProps.url = this.reformatUrl(newProps.url,queryIndex);
+          }else{
+            newProps.url = this.reformatUrl(newProps.url,newProps.url.length);
+          }
+        }
         let updating = browser.bookmarks.update(ID,newProps);
 
         // This error should only happen if the bookmark to be updated is no longer available when the update is being run but it was available when scanning
