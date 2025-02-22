@@ -84,7 +84,7 @@ body > h2:first-child{ padding: 0 8ch; margin-inline: auto; }
   padding-inline-end: 1ch;
 }
 
-.odd{  background-color: rgba(120,120,120,0.2) }
+.listItem:nth-child(2n){ background-color: rgba(120,120,120,0.2) }
 
 .listItem > input{ margin-inline: 1ch }
 .listItem > input:not(:checked) ~ div{

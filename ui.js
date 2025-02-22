@@ -1,4 +1,4 @@
-'use strict';
+import { PostMan } from "./postman.js";
 
 let INTERVAL = null;
 let currentScanLength = 0;
@@ -6,52 +6,6 @@ const excludeList = new Map();
 const LOCAL_URL_PREFIXES = ["192.168.","127.0.","10.0.0.","10.10.1.","10.1"];
 const SUPPORTED_PROPERTIES = ["url","title"];
 const DQ = document.querySelector.bind(document);
-
-
-
-function messageHandler(request,sender,sendResponse){
-  if(sender.id != browser.runtime.id || sender.envType != "addon_child"){
-      return
-  }
-  let button = DQ("#almostUpdateButton");
-  switch(request.type){
-    case "scan":
-      currentScanLength = request.length;
-      
-      if(request.success){
-        button.removeAttribute("disabled");
-        setStatus("Scan complete",false,"Number of matching bookmarks");
-        DQ("#domainText").textContent = request.domain || "";
-        browser.runtime.sendMessage({operation:"list"})
-        // background will send the list soon after
-      }else{
-        button.setAttribute("disabled","true");
-        setStatus("Scan failed");
-      }
-      DQ("#scanButton").textContent = "Scan bookmarks";
-      
-      break;
-    case "update":
-
-      if(request.success){
-        setStatus(`Update success:${request.length} bookmarks were updated`," ");
-      }else{
-        let fails = request.failures ? request.failures.length : 0;
-        setStatus(`Update finished with ${request.length - fails} success and ${request.failures.length} failures`," ","Failed operations");
-        listFailures({list:request.failures});
-      }
-      button.setAttribute("disabled","true");
-      DQ("#scanButton").removeAttribute("disabled");
-      clearInterval(INTERVAL);
-      break;
-    case "list":
-      listBookmarks(request);
-      break;
-    default:
-      return
-  }
-  
-}
 
 function createListItem(bm,isChecked){
   function createCheckbox(bm){
@@ -84,8 +38,6 @@ function createListItem(bm,isChecked){
   return container
 }
 
-
-
 function listFailures(request){
   let listParent = DQ("#bmList");
   let odd = true;
@@ -100,38 +52,35 @@ function listFailures(request){
   document.body.setAttribute("style",`--bmb-bookmark-count:'${request.list.length}'`);
 }
 
-function listBookmarks(request){
-  excludeList.clear();
-  
-  function shouldBMBeChecked(bm){
-    if(!bm.url){
-      return true
-    }
-    switch(request.operation){
-      case "protocol":
-        return LOCAL_URL_PREFIXES.every(url=>!bm.url.match.startsWith(`http://${url}`))
-      case "regexp":
-        return !bm.url.match.startsWith("javascript:") && !bm.url.match.startsWith("data:") ;
-    }
+function shouldBMBeChecked(bm,operation){
+  if(!bm.url){
     return true
   }
-  
+  switch(operation){
+    case "protocol":
+      return LOCAL_URL_PREFIXES.every(url=>!bm.url.match.startsWith(`http://${url}`))
+    case "regexp":
+      return !bm.url.match.startsWith("javascript:") && !bm.url.match.startsWith("data:") ;
+  }
+  return true
+}
+
+function listBookmarks(request){
+  excludeList.clear();
   let listParent = DQ("#bmList");
-  let odd = true;
   while(listParent.children.length > 0){
     listParent.removeChild(listParent.children[0]);
   }
   
-  for(let bm of request.list){
-    let enabled = shouldBMBeChecked(bm);
+  for(let bm of request.value){
+    let enabled = shouldBMBeChecked(bm,request.operation);
     if(!enabled){
       excludeList.set(bm.id,true);
     }
     let item = listParent.appendChild(createListItem(bm,enabled));
-    odd && item.classList.add("odd");
-    odd = !odd;
   }
-  document.body.setAttribute("style",`--bmb-bookmark-count:'${request.list.length - excludeList.size}'`);
+  document.body.setAttribute("style",`--bmb-bookmark-count:'${request.value.length - excludeList.size}'`);
+  currentScanLength = request.value.length;
 }
 
 function setStatus(message,progress,listContext){
@@ -172,15 +121,25 @@ function requestScan(e){
       op.properties.type = null;
   }
   
-  browser.runtime.sendMessage(op)
+  postMan.send(op)
   .then(
-    (response)=>{
+    async response => {
       if(response.ok){
         setStatus("Please wait");
+        let delivery = await postMan.expectDelivery("scan");
+        let button = DQ("#almostUpdateButton");
+        button.removeAttribute("disabled");
+        setStatus("Scan complete",false,"Number of matching bookmarks");
+        DQ("#domainText").textContent = response.domain || "";
+        DQ("#scanButton").textContent = "Scan bookmarks";
+        let res = await postMan.send({operation:"list"});
+        if(res.ok){
+          listBookmarks(res)
+        }
       }else{
         e.target.textContent = "Scan Bookmarks";
         setStatus(`Error: ${response.message}`);
-        listBookmarks({list:[]});
+        listBookmarks({value:[]});
         document.body.setAttribute("style","--bmb-bookmark-count:'0'");
       }
     },
@@ -194,7 +153,7 @@ function initView(state){
 }
 
 async function statusCheck(){
-  browser.runtime.sendMessage({operation:"status"})
+  postMan.send({operation:"status"})
   .then(
     (message)=>(message.busy && setStatus("Progress: ",message.progress))
   )
@@ -227,10 +186,8 @@ function onCheckboxToggle(ev){
   }
 }
 
-
-
 function requestUpdate(e){
-  browser.runtime.sendMessage({
+  postMan.send({
     operation:"update",
     excludes:Array.from(excludeList.keys()),
     allowUrlFixup:DQ("#fixupCheckbox").checked
@@ -239,7 +196,27 @@ function requestUpdate(e){
     (response)=>{
       if(response.ok){
         initView(response);
-        INTERVAL = setInterval(statusCheck,300)
+        INTERVAL = setInterval(statusCheck,300);
+        postMan.expectDelivery("update")
+        .then(delivery => {
+          clearInterval(INTERVAL);
+          INTERVAL = null;
+          
+          if(delivery.ok){
+            if(delivery.length === 0){
+              setStatus(`Nothing was done`)
+            }else{
+              setStatus(`Update success:${delivery.length} bookmarks were updated`," ");
+            }
+          }else{
+            let fails = delivery.failures.length;
+            setStatus(`Update finished with ${delivery.length - fails} success and ${delivery.failures.length} failures`," ","Failed operations");
+            listFailures({list:delivery.failures});
+          }
+          DQ("#almostUpdateButton").setAttribute("disabled","true");
+          DQ("#scanButton").removeAttribute("disabled");
+          
+        })
       }else{
         setStatus(`Error:${response.message}`);
         DQ("#almostUpdateButton").setAttribute("disabled","true");
@@ -255,6 +232,15 @@ function showUpdateButton(){
   DQ("#updateWarning").classList.remove("hidden")
 }
 
+// Communication is done using ports so that background-script doesn't terminate while the ui document is open
+
+const postMan = new PostMan({type: "port"});
+let pingInterval = null;
+function ping(){
+  return postMan.send({ping:1});
+}
+
+
 document.onreadystatechange = function () {
   if (document.readyState === "complete") {
     DQ("#scanButton").addEventListener("click",requestScan);
@@ -267,10 +253,7 @@ document.onreadystatechange = function () {
           () => (r.checked&&DQ("#almostUpdateButton").setAttribute("disabled","true")))
       }
     );
-    
-    browser.runtime.onMessage.addListener(messageHandler);
-    // Ask status from background
-    browser.runtime.sendMessage({operation:"status"})
+    postMan.send({operation:"status"})
     .then( (state) => {
       if(state.busy){
         initView(state);
@@ -279,7 +262,8 @@ document.onreadystatechange = function () {
     });
       
     window.addEventListener("unload",function(e){
-      browser.runtime.sendMessage({operation:"reset"})
+      browser.runtime.sendMessage({operation:"reset"});
+      clearInterval(pingInterval);
     })
   }
 }
